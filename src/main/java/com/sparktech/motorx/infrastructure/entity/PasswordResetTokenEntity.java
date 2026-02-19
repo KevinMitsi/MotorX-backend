@@ -42,8 +42,7 @@ public class PasswordResetTokenEntity {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (expiresAt == null) {
-
-            expiresAt = LocalDateTime.now().plusHours(1/2);
+            expiresAt = LocalDateTime.now().plusHours(1);
         }
     }
 }
