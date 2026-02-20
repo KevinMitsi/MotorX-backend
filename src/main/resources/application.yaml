@@ -1,3 +1,105 @@
 spring:
   application:
     name: motorx
+
+  # ============================================================
+  # DATASOURCE - PostgreSQL
+  # ============================================================
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:motorx}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:password}
+    hikari:
+      connection-timeout: 20000        # Tiempo máximo esperando conexión del pool (ms)
+      minimum-idle: 5                  # Conexiones mínimas mantenidas en el pool
+      maximum-pool-size: 10            # Máximo de conexiones simultáneas
+      idle-timeout: 300000             # Tiempo antes de cerrar una conexión idle (ms)
+      max-lifetime: 1200000            # Vida máxima de una conexión en el pool (ms)
+      connection-test-query: SELECT 1  # Query de validación de conexión viva
+
+  # ============================================================
+  # JPA / HIBERNATE
+  # ============================================================
+  jpa:
+    hibernate:
+      ddl-auto: validate               # Flyway gestiona la BD, Hibernate solo valida
+    show-sql: true                     # Ver queries en consola (útil en desarrollo)
+    properties:
+      hibernate:
+        format_sql: true               # Formatea el SQL en consola para legibilidad
+        dialect: org.hibernate.dialect.PostgreSQLDialect  # Dialecto específico para PostgreSQL
+        jdbc:
+          time_zone: UTC               # Consistencia de zonas horarias en la BD
+        default_schema: public
+
+  # ============================================================
+  # FLYWAY - Migraciones
+  # ============================================================
+  flyway:
+    enabled: true
+    locations: classpath:db/migration  # Carpeta donde están los scripts V1__, V2__...
+    baseline-on-migrate: true          # Necesario si la BD ya existe previamente
+    validate-on-migrate: true          # Valida checksums antes de migrar
+    out-of-order: false                # Nunca permite migraciones fuera de orden
+    schemas: public
+
+  # ============================================================
+  # Seguridad - Spring Security (habilitar debug para ver la cadena de filtros)
+  # ============================================================
+  security:
+    debug: true                        # Muestra la cadena de filtros y más información para debug
+
+  # ============================================================
+  # MAIL - Notificaciones (recuperación de contraseña)
+  # ============================================================
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:tucorreo@gmail.com}
+    password: ${MAIL_PASSWORD:tupassword}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+  web:
+    error:
+      include-binding-errors: always
+      include-message: always
+
+# ============================================================
+# SERVER
+# ============================================================
+server:
+  port: 8080
+
+
+# ============================================================
+# JWT - Autenticación (ajusta el secret antes de producción)
+# ============================================================
+jwt:
+  secret: ${JWT_SECRET:motorx-local-secret-key-must-be-at-least-256-bits-long-change-in-prod}
+  expiration: 86400000                 # 24 horas en milisegundos
+  refresh-expiration: 604800000        # 7 días en milisegundos
+
+# ============================================================
+# LOGGING
+# ============================================================
+logging:
+  level:
+    root: INFO
+    com.sparktech.motorx: DEBUG        # Debug en tu propio código
+    org.hibernate.SQL: DEBUG           # Ver SQL generado por Hibernate
+    org.hibernate.type.descriptor.sql: TRACE  # Ver parámetros de las queries
+    org.flywaydb: INFO
+    org.springframework.security: DEBUG      # Habilita logs de Spring Security
+    org.springframework.security.web: DEBUG  # Logs más detallados del web security
+    org.springframework.security.filter.FilterChainProxy: TRACE  # Traza la cadena de filtros
+    org.springframework.security.authentication: DEBUG          # Detalles de autenticación
+    org.springframework.security.web.authentication: DEBUG     # Detalles de auth web
+    org.springframework.security.web.access: DEBUG             # Acceso y rechazos
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

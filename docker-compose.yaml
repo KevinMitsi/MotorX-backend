@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  motorx-db:
+    image: postgres:16
+    container_name: motorx-postgres
+    restart: always
+
+    environment:
+      POSTGRES_DB: motorx
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - motorx_data:/var/lib/postgresql/data
+
+    networks:
+      - motorx-network
+
+volumes:
+  motorx_data:
+    driver: local
+
+networks:
+  motorx-network:
+    driver: bridge
