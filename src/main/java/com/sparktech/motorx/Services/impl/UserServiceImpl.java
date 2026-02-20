@@ -2,6 +2,7 @@ package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IUserService;
 import com.sparktech.motorx.dto.auth.RegisterUserDTO;
+import com.sparktech.motorx.dto.user.UpdateUserRequestDTO;
 import com.sparktech.motorx.entity.Role;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.repository.JpaUserRepository;
@@ -42,5 +43,19 @@ public class UserServiceImpl implements IUserService {
 
         jpaUserRepository.save(user);
     }
+
+    @Override
+    public void updateUserDTO(Long userId, UpdateUserRequestDTO userUpdate) {
+        UserEntity user = jpaUserRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        user.setName(userUpdate.firstName());
+        user.setPhone(userUpdate.phone());
+
+        jpaUserRepository.save(user);
+    }
+
+
+
 }
 
