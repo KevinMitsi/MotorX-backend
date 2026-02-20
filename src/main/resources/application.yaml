@@ -7,9 +7,9 @@ spring:
   # ============================================================
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/motorx
-    username: postgres
-    password: password
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:motorx}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:password}
     hikari:
       connection-timeout: 20000        # Tiempo máximo esperando conexión del pool (ms)
       minimum-idle: 5                  # Conexiones mínimas mantenidas en el pool
@@ -43,6 +43,12 @@ spring:
     validate-on-migrate: true          # Valida checksums antes de migrar
     out-of-order: false                # Nunca permite migraciones fuera de orden
     schemas: public
+
+  # ============================================================
+  # Seguridad - Spring Security (habilitar debug para ver la cadena de filtros)
+  # ============================================================
+  security:
+    debug: true                        # Muestra la cadena de filtros y más información para debug
 
   # ============================================================
   # MAIL - Notificaciones (recuperación de contraseña)
@@ -89,5 +95,11 @@ logging:
     org.hibernate.SQL: DEBUG           # Ver SQL generado por Hibernate
     org.hibernate.type.descriptor.sql: TRACE  # Ver parámetros de las queries
     org.flywaydb: INFO
+    org.springframework.security: DEBUG      # Habilita logs de Spring Security
+    org.springframework.security.web: DEBUG  # Logs más detallados del web security
+    org.springframework.security.filter.FilterChainProxy: TRACE  # Traza la cadena de filtros
+    org.springframework.security.authentication: DEBUG          # Detalles de autenticación
+    org.springframework.security.web.authentication: DEBUG     # Detalles de auth web
+    org.springframework.security.web.access: DEBUG             # Acceso y rechazos
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
