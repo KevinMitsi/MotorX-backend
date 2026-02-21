@@ -2,6 +2,7 @@ package com.sparktech.motorx.repository;
 
 import com.sparktech.motorx.entity.EmployeeState;
 import com.sparktech.motorx.entity.EmployeeEntity;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface JpaEmployeeRepository extends JpaRepository<EmployeeEntity, Long> {
+public interface JpaEmployeeRepository extends JpaRepository<@NotNull EmployeeEntity, @NotNull Long> {
 
     // --- Búsqueda por usuario vinculado ---
     Optional<EmployeeEntity> findByUserId(Long userId);

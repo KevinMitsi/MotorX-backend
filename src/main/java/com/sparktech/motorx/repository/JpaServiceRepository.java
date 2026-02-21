@@ -1,6 +1,7 @@
 package com.sparktech.motorx.repository;
 
 import com.sparktech.motorx.entity.ServiceEntity;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface JpaServiceRepository extends JpaRepository<ServiceEntity, Long> {
+public interface JpaServiceRepository extends JpaRepository<@NotNull ServiceEntity, @NotNull Long> {
 
     // --- Búsqueda básica ---
     Optional<ServiceEntity> findByName(String name);

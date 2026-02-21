@@ -2,6 +2,7 @@ package com.sparktech.motorx.repository;
 
 import com.sparktech.motorx.entity.PasswordResetTokenEntity;
 import com.sparktech.motorx.entity.UserEntity;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,22 +14,16 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface JpaPasswordResetTokenRepository extends JpaRepository<PasswordResetTokenEntity, Long> {
+public interface JpaPasswordResetTokenRepository extends JpaRepository<@NotNull PasswordResetTokenEntity, @NotNull Long> {
+        // Busca un token por su hash que no haya sido usado
 
-    // --- Validación del token ---
-    Optional<PasswordResetTokenEntity> findByTokenHash(String tokenHash);
+        Optional<PasswordResetTokenEntity> findByTokenHashAndUsedFalse(String tokenHash);
 
-    // Busca token válido: no usado y no expirado
-    @Query("""
-            SELECT t FROM PasswordResetTokenEntity t
-            WHERE t.tokenHash = :tokenHash
-              AND t.used = false
-              AND t.expiresAt > :now
-            """)
-    Optional<PasswordResetTokenEntity> findValidToken(
-            @Param("tokenHash") String tokenHash,
-            @Param("now") LocalDateTime now
-    );
+        // Busca todos los tokens no usados de un usuario
+
+        List<PasswordResetTokenEntity> findByUserAndUsedFalse(UserEntity user);
+
+
 
     // --- Métrica: Tiempo promedio de recuperación de contraseña ---
     // Trae tokens usados en un rango para calcular (usedAt - createdAt)
@@ -40,18 +35,6 @@ public interface JpaPasswordResetTokenRepository extends JpaRepository<PasswordR
     List<PasswordResetTokenEntity> findUsedTokensBetween(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
-    );
-
-    // --- Tokens activos de un usuario (para invalidar anteriores al generar uno nuevo) ---
-    @Query("""
-            SELECT t FROM PasswordResetTokenEntity t
-            WHERE t.user = :user
-              AND t.used = false
-              AND t.expiresAt > :now
-            """)
-    List<PasswordResetTokenEntity> findActiveTokensByUser(
-            @Param("user") UserEntity user,
-            @Param("now") LocalDateTime now
     );
 
     // --- Limpieza de tokens expirados (tarea programada) ---

@@ -3,6 +3,7 @@ package com.sparktech.motorx.repository;
 import com.sparktech.motorx.entity.EventSeverity;
 import com.sparktech.motorx.entity.EventType;
 import com.sparktech.motorx.entity.SystemEventEntity;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface JpaSystemEventRepository extends JpaRepository<SystemEventEntity, Long> {
+public interface JpaSystemEventRepository extends JpaRepository<@NotNull SystemEventEntity, @NotNull Long> {
 
     // --- Métrica: Tasa de Registros Fallidos ---
     // Intentos totales vs fallidos

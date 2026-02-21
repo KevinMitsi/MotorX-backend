@@ -3,6 +3,7 @@ package com.sparktech.motorx.repository;
 
 import com.sparktech.motorx.entity.AppointmentStatus;
 import com.sparktech.motorx.entity.AppointmentEntity;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,7 +14,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 @Repository
-public interface JpaAppointmentRepository extends JpaRepository<AppointmentEntity, Long> {
+public interface JpaAppointmentRepository extends JpaRepository<@NotNull AppointmentEntity, @NotNull Long> {
 
     // --- Historial de citas por vehículo (Proceso 2 - historial de citas) ---
     List<AppointmentEntity> findByVehicleIdOrderByAppointmentDateDesc(Long vehicleId);

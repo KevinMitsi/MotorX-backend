@@ -2,6 +2,7 @@ package com.sparktech.motorx.repository;
 
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.entity.VehicleEntity;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface JpaVehicleRepository extends JpaRepository<VehicleEntity, Long> {
+public interface JpaVehicleRepository extends JpaRepository<@NotNull VehicleEntity, @NotNull Long> {
 
     // --- Búsqueda básica ---
     Optional<VehicleEntity> findByLicensePlate(String licensePlate);
