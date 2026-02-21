@@ -39,7 +39,7 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
 
     @Override
     @Transactional
-    public void requestReset(PasswordResetRequestDTO dto) throws UserNotFoundException {
+    public void requestReset(PasswordResetRequestDTO dto) throws UserNotFoundException, RecoveryTokenException {
         log.info("Solicitud de recuperación para: {}", dto.email());
 
         // 1. Buscar usuario
@@ -143,12 +143,12 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
      */
     private void sendPasswordResetEmail(UserEntity user, String recoveryCode) {
         try {
-            String subject = "Recuperación de Contraseña - StayGo";
+            String subject = "Recuperación de Contraseña - Jmmotoservicio";
             String body = String.format(
                     """
                     Hola %s,
                     
-                    Has solicitado restablecer tu contraseña en StayGo.
+                    Has solicitado restablecer tu contraseña en Jmmotoservicio.
                     
                     Tu código de recuperación es: %s
                     
@@ -157,7 +157,7 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
                     Si no solicitaste este cambio, puedes ignorar este correo.
                     
                     Saludos,
-                    Equipo de Alojamientos
+                    Equipo de Taller
                     """,
                     user.getName() != null ? user.getName() : "Usuario",
                     recoveryCode,
@@ -178,19 +178,19 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
      */
     private void sendPasswordChangeConfirmationEmail(UserEntity user) {
         try {
-            String subject = "Contraseña Cambiada Exitosamente - StayGo";
+            String subject = "Contraseña Cambiada Exitosamente - Jmmotoservicio";
             String body = String.format(
                     """
                     Hola %s,
                     
-                    Tu contraseña ha sido cambiada exitosamente en StayGo.
+                    Tu contraseña ha sido cambiada exitosamente en la applicación.
                     
                     Fecha y hora del cambio: %s
                     
                     Si no realizaste este cambio, contacta inmediatamente con nuestro soporte.
                     
                     Saludos,
-                    Equipo de Alojamientos
+                    Equipo de Taller
                     """,
                     user.getName() != null ? user.getName() : "Usuario",
                     LocalDateTime.now()

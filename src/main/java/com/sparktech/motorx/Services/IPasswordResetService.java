@@ -7,6 +7,6 @@ import com.sparktech.motorx.exception.RecoveryTokenException;
 import com.sparktech.motorx.exception.UserNotFoundException;
 
 public interface IPasswordResetService {
-    void requestReset(PasswordResetRequestDTO dto) throws UserNotFoundException;
+    void requestReset(PasswordResetRequestDTO dto) throws UserNotFoundException, RecoveryTokenException;
     void resetPassword(PasswordResetDTO dto) throws RecoveryTokenException;
 }

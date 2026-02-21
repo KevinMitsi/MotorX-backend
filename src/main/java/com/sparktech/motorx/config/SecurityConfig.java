@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -74,11 +75,16 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
 
-                        // Endpoints públicos (sin autenticación)
-                        // Permitir tanto /api/auth/** como /auth/** (algunas llamadas usan /auth/login)
-                        .requestMatchers("/api/auth/**", "/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // Permitir PUT en /api/password-reset y /api/password-reset/ (con y sin barra)
+                        .requestMatchers(HttpMethod.PUT, "/api/password-reset").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/password-reset/").permitAll()
                         .requestMatchers("/api/password-reset/**").permitAll()
+
+
+                        .requestMatchers("/api/public/**").permitAll()
+
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
                         //Admin users

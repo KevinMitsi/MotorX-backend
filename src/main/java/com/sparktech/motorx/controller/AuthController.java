@@ -58,7 +58,7 @@ public class AuthController {
     /**
      * Logout del usuario
      */
-    @PostMapping("/logout")
+    @GetMapping("/logout")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<@NotNull String> logout() {
         log.info("Petición de logout recibida");
