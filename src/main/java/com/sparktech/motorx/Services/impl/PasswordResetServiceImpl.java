@@ -2,6 +2,7 @@ package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IEmailNotificationService;
 import com.sparktech.motorx.Services.IPasswordResetService;
+import com.sparktech.motorx.Services.IVerificationCodeService;
 
 import com.sparktech.motorx.dto.auth.PasswordResetDTO;
 import com.sparktech.motorx.dto.auth.PasswordResetRequestDTO;
@@ -21,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
 
@@ -34,6 +34,7 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
     private final JpaPasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final IEmailNotificationService notificationService;
+    private final IVerificationCodeService verificationCodeService;
 
     private static final int TOKEN_EXPIRATION_MINUTES = 15;
 
@@ -49,8 +50,8 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
         // 3. Invalidar tokens anteriores
         invalidatePreviousTokens(user);
 
-        // 4. Generar código de recuperación
-        String recoveryCode = generateRecoveryCode();
+        // 4. Generar código de recuperación usando el servicio centralizado
+        String recoveryCode = verificationCodeService.generateVerificationCode();
 
         // 5. Hashear el código para almacenarlo de forma segura
         String hashedCode = hashToken(recoveryCode);
@@ -118,11 +119,6 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
                 });
     }
 
-    private String generateRecoveryCode() {
-        SecureRandom random = new SecureRandom();
-        int code = 100000 + random.nextInt(900000); // Genera número entre 100000 y 999999
-        return String.valueOf(code);
-    }
 
     /**
      * Crea un hash SHA-256 del código para almacenarlo de forma segura
