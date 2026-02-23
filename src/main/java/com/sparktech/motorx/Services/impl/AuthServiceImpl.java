@@ -2,6 +2,8 @@ package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IAuthService;
 import com.sparktech.motorx.Services.IUserService;
+import com.sparktech.motorx.Services.IVerificationCodeCacheService;
+import com.sparktech.motorx.Services.IVerificationCodeService;
 import com.sparktech.motorx.dto.auth.AuthResponseDTO;
 import com.sparktech.motorx.dto.auth.LoginRequestDTO;
 import com.sparktech.motorx.dto.auth.RegisterUserDTO;
@@ -35,27 +37,24 @@ public class AuthServiceImpl implements IAuthService {
     private final IUserService userService;
     private final CustomUserDetailsService userDetailsService;
     private final UserEntityMapper userMapper;
+    private final IVerificationCodeService verificationCodeService;
+    private final IVerificationCodeCacheService cacheService;
 
     @Override
     @Transactional
-    public AuthResponseDTO login(LoginRequestDTO loginRequest) throws InvalidPasswordException {
+    public String login(LoginRequestDTO loginRequest) throws InvalidPasswordException {
         try {
             log.info("Intentando autenticar usuario: {}", loginRequest.email());
             AuthResult result = authenticateAndBuildAuthResult(loginRequest.email(), loginRequest.password());
 
-            String token = result.token;
             UserEntity user = result.user;
 
-            log.info("Usuario autenticado exitosamente: {}", loginRequest.email());
+            // Generar y enviar código de verificación 2FA (se almacena automáticamente en caché)
+            verificationCodeService.generateAndSendVerificationCode(user);
+            log.info("Código de verificación generado y enviado para: {}", loginRequest.email());
 
-            // Construir respuesta según AuthResponseDTO disponible
-            return new AuthResponseDTO(
-                    token,
-                    user.getId(),
-                    user.getEmail(),
-                    user.getName(),
-                    user.getRole()
-            );
+            return "Código de verificación enviado al email asociado a la cuenta";
+
 
         } catch (BadCredentialsException e) {
             log.warn("Credenciales inválidas para: {}", loginRequest.email());
@@ -140,11 +139,39 @@ public class AuthServiceImpl implements IAuthService {
         }
     }
 
+    @Override
+    public AuthResponseDTO verify2FA(String email, String code) throws InvalidPasswordException {
+        log.info("Verificando código 2FA para: {}", email);
+
+        // Validar el código contra el almacenado en caché
+        boolean isValid = cacheService.validateCode(email, code);
+
+        if (!isValid) {
+            log.warn("Código 2FA inválido o expirado para: {}", email);
+            throw new InvalidPasswordException("Código de verificación inválido o expirado");
+        }
+
+        // Generar token JWT para el usuario
+        UserEntity user = userDetailsService.getUserEntityByEmail(email);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        String token = jwtService.generateToken(userDetails);
+
+        log.info("Código 2FA verificado exitosamente para: {}", email);
+
+        return new AuthResponseDTO(
+                token,
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getRole()
+        );
+    }
+
     // Nuevo contenedor privado para devolver token + user
         private record AuthResult(String token, UserEntity user) {
     }
 
-    // Método auxiliar extraído para evitar duplicación
+
     private AuthResult authenticateAndBuildAuthResult(String email, String password) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, password)

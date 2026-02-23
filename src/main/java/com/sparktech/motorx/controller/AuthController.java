@@ -5,6 +5,7 @@ import com.sparktech.motorx.Services.IAuthService;
 import com.sparktech.motorx.dto.auth.AuthResponseDTO;
 import com.sparktech.motorx.dto.auth.LoginRequestDTO;
 import com.sparktech.motorx.dto.auth.RegisterUserDTO;
+import com.sparktech.motorx.dto.auth.Verify2FADTO;
 import com.sparktech.motorx.dto.user.UserDTO;
 import com.sparktech.motorx.exception.InvalidPasswordException;
 import com.sparktech.motorx.exception.UserNotFoundException;
@@ -25,12 +26,22 @@ public class AuthController {
     private final IAuthService authService;
 
     /**
-     * Login de usuario
+     * Login de usuario - Genera y envía código 2FA
      */
     @PostMapping("/login")
-    public ResponseEntity<@NotNull AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequest) throws InvalidPasswordException {
+    public ResponseEntity<@NotNull String> login(@Valid @RequestBody LoginRequestDTO loginRequest) throws InvalidPasswordException {
         log.info("Petición de login recibida para: {}", loginRequest.email());
-        AuthResponseDTO response = authService.login(loginRequest);
+        String response = authService.login(loginRequest);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Verificación de código 2FA
+     */
+    @PostMapping("/verify-2fa")
+    public ResponseEntity<@NotNull AuthResponseDTO> verify2FA(@Valid @RequestBody Verify2FADTO request) throws InvalidPasswordException {
+        log.info("Petición de verificación 2FA recibida para: {}", request.email());
+        AuthResponseDTO response = authService.verify2FA(request.email(), request.code());
         return ResponseEntity.ok(response);
     }
 
