@@ -34,13 +34,9 @@ public interface JpaServiceRepository extends JpaRepository<@NotNull ServiceEnti
     List<ServiceEntity> findByActiveTrueOrderByEstimatedDurationMinutesAsc();
 
     // --- Servicios más agendados (KPI futuro - soporte desde ya) ---
-    @Query("""
-            SELECT s, COUNT(a) as total
-            FROM ServiceEntity s
-            LEFT JOIN AppointmentEntity a ON a.service = s
-            WHERE s.active = true
-            GROUP BY s
-            ORDER BY total DESC
-            """)
-    List<Object[]> findMostRequestedServices();
+    // Nota: AppointmentEntity usa el enum AppointmentType, no ServiceEntity.
+    //       Este método devuelve los servicios activos ordenados por precio
+    //       como referencia de catálogo. La estadística de citas por tipo
+    //       se obtiene desde JpaAppointmentRepository.
+    List<ServiceEntity> findByActiveTrueOrderByBasePriceAsc();
 }

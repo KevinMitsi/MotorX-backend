@@ -12,20 +12,25 @@ import java.time.LocalTime;
         name = "appointments",
         indexes = {
                 @Index(name = "idx_appointment_vehicle", columnList = "vehicle_id"),
-                @Index(name = "idx_appointment_service", columnList = "service_id"),
+                @Index(name = "idx_appointment_technician", columnList = "technician_id"),
                 @Index(name = "idx_appointment_date", columnList = "appointment_date"),
-                @Index(name = "idx_appointment_state", columnList = "state")
+                @Index(name = "idx_appointment_status", columnList = "status")
         }
 )
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class AppointmentEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "appointment_type", nullable = false, length = 30)
+    private AppointmentType appointmentType;
 
     @Column(name = "appointment_date", nullable = false)
     private LocalDate appointmentDate;
@@ -40,8 +45,14 @@ public class AppointmentEntity {
     @Column(nullable = false, length = 30)
     private AppointmentStatus status;
 
-    @Column(length = 500)
-    private String description;
+    @Column(name = "client_notes", length = 500)
+    private String clientNotes;
+
+    @Column(name = "admin_notes", length = 500)
+    private String adminNotes;
+
+    @Column(name = "cancellation_reason", length = 500)
+    private String cancellationReason;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -53,9 +64,9 @@ public class AppointmentEntity {
     @JoinColumn(name = "vehicle_id", nullable = false)
     private VehicleEntity vehicle;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "service_id", nullable = false)
-    private ServiceEntity service;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "technician_id")
+    private EmployeeEntity technician;
 
     @Column(name = "process_started_at")
     private LocalDateTime processStartedAt;
