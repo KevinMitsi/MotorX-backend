@@ -129,11 +129,12 @@ public class AppointmentServiceImpl implements IAppointmentService {
         // 6. Validar que la marca es compatible con el tipo de cita
         validateBrandCompatibility(vehicle.getBrand(), request.appointmentType());
 
-        // 7. Validar que el slot horario es válido para el tipo
-        validateSlotForType(request.startTime(), request.appointmentType());
-
-        // 8. Validar que no estamos en horario de almuerzo ni fuera del horario laboral
+        // 7. Validar que no estamos en horario de almuerzo ni fuera del horario laboral
         validateWithinBusinessHours(request.startTime());
+
+
+        // 8. Validar que el slot horario es válido para el tipo
+        validateSlotForType(request.startTime(), request.appointmentType());
 
         // 9. EVITAR DOBLE AGENDAMIENTO: verificar si el vehículo ya tiene citas activas
         boolean hasActive = appointmentRepository.existsActiveAppointmentByVehicleId(vehicle.getId());
