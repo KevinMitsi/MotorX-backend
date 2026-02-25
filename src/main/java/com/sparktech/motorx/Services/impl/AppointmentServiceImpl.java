@@ -16,6 +16,7 @@ import com.sparktech.motorx.repository.JpaEmployeeRepository;
 import com.sparktech.motorx.repository.JpaVehicleRepository;
 import com.sparktech.motorx.Services.IAppointmentService;
 import com.sparktech.motorx.Services.IEmailNotificationService;
+import com.sparktech.motorx.dto.notification.AppointmentNotificationDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -149,7 +150,19 @@ public class AppointmentServiceImpl implements IAppointmentService {
         AppointmentEntity saved = appointmentRepository.save(appointment);
 
         // 11. Notificar al cliente (siempre al crear)
-        notificationService.sendAppointmentCreatedNotification(saved);
+        // Construir DTO para la notificación y enviarlo (evitar pasar entidad JPA a @Async)
+        AppointmentNotificationDTO createdDto = new AppointmentNotificationDTO(
+                saved.getVehicle().getOwner().getEmail(),
+                saved.getVehicle().getOwner().getName(),
+                saved.getAppointmentDate(),
+                saved.getStartTime(),
+                saved.getAppointmentType().name(),
+                saved.getVehicle().getBrand(),
+                saved.getVehicle().getModel(),
+                saved.getVehicle().getLicensePlate(),
+                saved.getTechnician() != null ? saved.getTechnician().getUser().getName() : null
+        );
+        notificationService.sendAppointmentCreatedNotification(createdDto);
 
         return appointmentMapper.toResponseDTO(saved);
     }
@@ -210,6 +223,7 @@ public class AppointmentServiceImpl implements IAppointmentService {
                 .technician(technician)
                 .status(AppointmentStatus.SCHEDULED)
                 .adminNotes(request.adminNotes())
+                .currentMileage(request.currentMileage())
                 .build();
 
         AppointmentEntity saved = appointmentRepository.save(appointment);
@@ -234,7 +248,18 @@ public class AppointmentServiceImpl implements IAppointmentService {
         AppointmentEntity saved = appointmentRepository.save(appointment);
 
         if (request.notifyClient()) {
-            notificationService.sendAppointmentCancelledNotification(saved, request.reason());
+            AppointmentNotificationDTO cancelledDto = new AppointmentNotificationDTO(
+                    saved.getVehicle().getOwner().getEmail(),
+                    saved.getVehicle().getOwner().getName(),
+                    saved.getAppointmentDate(),
+                    saved.getStartTime(),
+                    saved.getAppointmentType().name(),
+                    saved.getVehicle().getBrand(),
+                    saved.getVehicle().getModel(),
+                    saved.getVehicle().getLicensePlate(),
+                    saved.getTechnician() != null ? saved.getTechnician().getUser().getName() : null
+            );
+            notificationService.sendAppointmentCancelledNotification(cancelledDto, request.reason());
         }
 
         return appointmentMapper.toResponseDTO(saved);
@@ -269,11 +294,27 @@ public class AppointmentServiceImpl implements IAppointmentService {
             );
         }
 
+        if(newTechnician.getPosition() != EmployeePosition.MECANICO){
+            throw new IllegalArgumentException("El empleado seleccionado no es un técnico. " +
+                    "Por favor elige un técnico válido.");
+        }
+
         appointment.setTechnician(newTechnician);
         AppointmentEntity saved = appointmentRepository.save(appointment);
 
         if (request.notifyClient()) {
-            notificationService.sendAppointmentUpdatedNotification(saved);
+            AppointmentNotificationDTO updatedDto = new AppointmentNotificationDTO(
+                    saved.getVehicle().getOwner().getEmail(),
+                    saved.getVehicle().getOwner().getName(),
+                    saved.getAppointmentDate(),
+                    saved.getStartTime(),
+                    saved.getAppointmentType().name(),
+                    saved.getVehicle().getBrand(),
+                    saved.getVehicle().getModel(),
+                    saved.getVehicle().getLicensePlate(),
+                    saved.getTechnician() != null ? saved.getTechnician().getUser().getName() : null
+            );
+            notificationService.sendAppointmentUpdatedNotification(updatedDto);
         }
 
         return appointmentMapper.toResponseDTO(saved);
@@ -476,10 +517,10 @@ public class AppointmentServiceImpl implements IAppointmentService {
     private LocalTime resolveEndTime(AppointmentType type, LocalTime startTime) {
         return switch (type) {
             case OIL_CHANGE -> startTime.plusMinutes(AppointmentScheduleConfig.OIL_CHANGE_DURATION_MINUTES);
-            case QUICK_SERVICE, UNPLANNED -> startTime.plusMinutes(60);
-            case MANUAL_WARRANTY_REVIEW -> startTime.plusMinutes(45);
-            case AUTECO_WARRANTY, REWORK -> startTime.plusMinutes(120);
-            case MAINTENANCE -> startTime.plusMinutes(180);
+            case QUICK_SERVICE, UNPLANNED -> startTime.plusHours(2);
+            case MANUAL_WARRANTY_REVIEW -> startTime.plusHours(3);
+            case AUTECO_WARRANTY, REWORK -> startTime.plusHours(4);
+            case MAINTENANCE -> startTime.plusHours(8);
         };
     }
 

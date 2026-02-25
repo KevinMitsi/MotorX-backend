@@ -9,6 +9,7 @@ import com.sparktech.motorx.dto.auth.LoginRequestDTO;
 import com.sparktech.motorx.dto.auth.RegisterUserDTO;
 import com.sparktech.motorx.dto.user.UserDTO;
 import com.sparktech.motorx.entity.UserEntity;
+import com.sparktech.motorx.exception.BlockedAccountException;
 import com.sparktech.motorx.exception.InvalidPasswordException;
 import com.sparktech.motorx.exception.UserNotFoundException;
 import com.sparktech.motorx.mapper.UserEntityMapper;
@@ -48,6 +49,11 @@ public class AuthServiceImpl implements IAuthService {
             AuthResult result = authenticateAndBuildAuthResult(loginRequest.email(), loginRequest.password());
 
             UserEntity user = result.user;
+
+            if (user.isAccountLocked() || !user.isEnabled()){
+                log.warn("Usuario bloqueado o inhabilitado: {}", loginRequest.email());
+                throw new BlockedAccountException(user.getEmail());
+            }
 
             // Si el usuario es ADMIN, omitir 2FA y devolver token directamente
             if (com.sparktech.motorx.entity.Role.ADMIN.equals(user.getRole())) {

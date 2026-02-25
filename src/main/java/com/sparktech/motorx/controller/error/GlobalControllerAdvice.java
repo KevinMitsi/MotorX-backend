@@ -32,8 +32,19 @@ public class GlobalControllerAdvice {
 
     // ---------------------------------------------------------------
     // EXCEPCIONES DE AUTENTICACIÓN / TOKENS
-    // ---------------------------------------------------------------
+    // ----------------------
+    //
+    // -----------------------------------------
 
+    @ExceptionHandler(BlockedAccountException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleBlockedAccountException(BlockedAccountException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.UNAUTHORIZED.value(),
+                "Cuenta bloqueada o inhabilitada",
+                Map.of(KEY_DETAIL, ex.getMessage(), "tipo", "BlockedAccountException")
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
     @ExceptionHandler(InvalidPasswordException.class)
     public ResponseEntity<@NotNull ResponseErrorDTO> handleInvalidPasswordException(InvalidPasswordException ex) {
         ResponseErrorDTO error = new ResponseErrorDTO(
@@ -86,6 +97,26 @@ public class GlobalControllerAdvice {
                 Map.of(KEY_DETAIL, ex.getMessage())
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(UserAlreadyDeletedException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleUserAlreadyDeletedException(UserAlreadyDeletedException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.CONFLICT.value(),
+                "El usuario ya ha sido eliminado",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(UserAlreadyBlockedException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleUserAlreadyBlockedException(UserAlreadyBlockedException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.CONFLICT.value(),
+                "El usuario ya se encuentra bloqueado",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     @ExceptionHandler(EmployeeNotFoundException.class)
@@ -242,6 +273,7 @@ public class GlobalControllerAdvice {
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
+
 
     // ---------------------------------------------------------------
     // VALIDACIONES DE JAKARTA BEAN VALIDATION

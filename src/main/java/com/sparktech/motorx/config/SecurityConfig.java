@@ -70,7 +70,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
@@ -94,7 +94,6 @@ public class SecurityConfig {
                         ).permitAll()
 
                         //Admin users
-                        .requestMatchers("/api/users/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/v1/user/**").authenticated()
                         // Cualquier otra petición requiere autenticación
