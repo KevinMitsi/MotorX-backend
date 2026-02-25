@@ -1,4 +1,4 @@
-    package com.sparktech.motorx.repository;
+package com.sparktech.motorx.repository;
 
 
     import com.sparktech.motorx.entity.AppointmentStatus;
@@ -17,15 +17,20 @@
     public interface JpaAppointmentRepository extends JpaRepository<@NotNull AppointmentEntity, @NotNull Long> {
 
         /**
-         * Verifica si un técnico específico tiene una cita que se solapa con el slot dado.
-         * Este es el núcleo de la regla: "un técnico solo puede tener 1 moto por horario".
+         * Verifica si un técnico ya tiene una cita en el mismo slot de entrada (startTime) del día.
+         * La regla es: cada tipo de cita ocupa un slot de recepción ÚNICO (07:00, 07:15, 07:30, 07:45,
+         * 13:00, 13:15, 13:30), por lo que el bloqueo es por startTime exacto, no por rango.
+         * El endTime en BD es solo estimado para informar al cliente; NO se usa para bloquear al técnico.
+         * <p>
+         * Ejemplo: Oscar atiende MAINTENANCE a las 07:45. Sigue disponible para
+         * AUTECO_WARRANTY a las 07:30 o MANUAL_WARRANTY_REVIEW a las 07:00.
          */
         @Query("""
         SELECT COUNT(a) > 0 FROM AppointmentEntity a
         WHERE a.technician.id = :technicianId
           AND a.appointmentDate = :date
           AND a.status NOT IN ('CANCELLED', 'REJECTED', 'NO_SHOW')
-          AND (a.startTime < :endTime AND a.endTime > :startTime)
+          AND a.startTime = :startTime
         """)
         boolean existsTechnicianConflict(
                 @Param("technicianId") Long technicianId,
@@ -133,6 +138,14 @@
                   AND a.status IN ('SCHEDULED', 'IN_PROGRESS')
                 """)
         List<AppointmentEntity> findActiveAppointmentsByVehicle(@Param("vehicleId") Long vehicleId);
+
+        // Nuevo: comprobación booleana eficiente usando COUNT > 0 (aprovecha índice vehicle_id)
+        @Query("""
+                SELECT COUNT(a) > 0 FROM AppointmentEntity a
+                WHERE a.vehicle.id = :vehicleId
+                  AND a.status NOT IN ('COMPLETED', 'CANCELLED', 'REJECTED')
+                """)
+        boolean existsActiveAppointmentByVehicleId(@Param("vehicleId") Long vehicleId);
 
         // --- Citas por rango de fechas (vista de calendario) ---
         @Query("""

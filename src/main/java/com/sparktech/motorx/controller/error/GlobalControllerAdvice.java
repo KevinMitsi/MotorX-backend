@@ -197,6 +197,16 @@ public class GlobalControllerAdvice {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
+    @ExceptionHandler(VehicleHasActiveAppointmentException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleVehicleHasActiveAppointmentException(VehicleHasActiveAppointmentException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.CONFLICT.value(),
+                "El vehículo ya tiene una cita activa",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
     @ExceptionHandler(InvalidAppointmentSlotException.class)
     public ResponseEntity<@NotNull ResponseErrorDTO> handleInvalidAppointmentSlotException(InvalidAppointmentSlotException ex) {
         ResponseErrorDTO error = new ResponseErrorDTO(

@@ -24,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +55,16 @@ public class AppointmentServiceImpl implements IAppointmentService {
         List<EmployeeEntity> activeTechnicians = technicianRepository.findAllActive();
         List<AvailableSlotsResponseDTO.AvailableSlotDTO> availableSlots = new ArrayList<>();
 
+        // Si la fecha es hoy, solo mostrar slots cuya hora de inicio aún no ha pasado
+        LocalDate today = LocalDate.now(ZoneId.of("America/Bogota"));
+        LocalTime nowInBogota = ZonedDateTime.now(ZoneId.of("America/Bogota")).toLocalTime();
+
         for (LocalTime slotStart : candidateSlots) {
+            // Descartar slots cuya hora ya pasó si la fecha consultada es hoy
+            if (date.isEqual(today) && !slotStart.isAfter(nowInBogota)) {
+                continue;
+            }
+
             LocalTime slotEnd = resolveEndTime(type, slotStart);
             int freeTechnicians = countFreeTechniciansForSlot(activeTechnicians, date, slotStart, slotEnd);
 
@@ -124,13 +135,22 @@ public class AppointmentServiceImpl implements IAppointmentService {
         // 8. Validar que no estamos en horario de almuerzo ni fuera del horario laboral
         validateWithinBusinessHours(request.startTime());
 
-        // 9. Asignar técnico automáticamente (rotación)
+        // 9. EVITAR DOBLE AGENDAMIENTO: verificar si el vehículo ya tiene citas activas
+        boolean hasActive = appointmentRepository.existsActiveAppointmentByVehicleId(vehicle.getId());
+        if (hasActive) {
+            throw new VehicleHasActiveAppointmentException(
+                    "La moto con placa " + vehicle.getLicensePlate() +
+                            " ya tiene una cita activa. No es posible agendar otra hasta que se complete o se cancele."
+            );
+        }
+
+        // 10. Asignar técnico automáticamente (rotación)
         LocalTime endTime = resolveEndTime(request.appointmentType(), request.startTime());
         EmployeeEntity assignedTechnician = assignTechnicianAutomatically(
                 request.appointmentDate(), request.startTime(), endTime
         );
 
-        // 10. Persistir
+        // 11. Persistir
         String clientNotesStr = (request.clientNotes() != null && !request.clientNotes().isEmpty())
                 ? String.join("; ", request.clientNotes())
                 : null;
@@ -149,7 +169,7 @@ public class AppointmentServiceImpl implements IAppointmentService {
 
         AppointmentEntity saved = appointmentRepository.save(appointment);
 
-        // 11. Notificar al cliente (siempre al crear)
+        // 12. Notificar al cliente (siempre al crear)
         // Construir DTO para la notificación y enviarlo (evitar pasar entidad JPA a @Async)
         AppointmentNotificationDTO createdDto = new AppointmentNotificationDTO(
                 saved.getVehicle().getOwner().getEmail(),
@@ -385,16 +405,16 @@ public class AppointmentServiceImpl implements IAppointmentService {
 
         // Último dígito de la placa
         String cleanPlate = plate.trim().toUpperCase();
-        char lastChar = cleanPlate.charAt(cleanPlate.length() - 1);
+        char lastChar = cleanPlate.charAt(cleanPlate.length() - 2);
         if (!Character.isDigit(lastChar)) return false;
         int lastDigit = Character.getNumericValue(lastChar);
 
         Map<DayOfWeek, List<Integer>> restrictions = Map.of(
-                DayOfWeek.MONDAY,    List.of(1, 2),
-                DayOfWeek.TUESDAY,   List.of(3, 4),
-                DayOfWeek.WEDNESDAY, List.of(5, 6),
-                DayOfWeek.THURSDAY,  List.of(7, 8),
-                DayOfWeek.FRIDAY,    List.of(9, 0)
+                DayOfWeek.MONDAY,    List.of(5, 6),
+                DayOfWeek.TUESDAY,   List.of(7, 8),
+                DayOfWeek.WEDNESDAY, List.of(9, 0),
+                DayOfWeek.THURSDAY,  List.of(1, 2),
+                DayOfWeek.FRIDAY,    List.of(3, 4)
         );
 
         return restrictions.getOrDefault(dayOfWeek, List.of()).contains(lastDigit);
@@ -509,18 +529,14 @@ public class AppointmentServiceImpl implements IAppointmentService {
         }
     }
 
-    /**
-     * Resuelve la hora de fin según el tipo de cita.
-     * Los cambios de aceite duran 30 minutos; el resto ocupa el slot hasta la siguiente recepción.
-     * Para efectos del sistema, se asigna una duración estimada estándar por tipo.
-     */
+
     private LocalTime resolveEndTime(AppointmentType type, LocalTime startTime) {
         return switch (type) {
-            case OIL_CHANGE -> startTime.plusMinutes(AppointmentScheduleConfig.OIL_CHANGE_DURATION_MINUTES);
-            case QUICK_SERVICE, UNPLANNED -> startTime.plusHours(2);
-            case MANUAL_WARRANTY_REVIEW -> startTime.plusHours(3);
-            case AUTECO_WARRANTY, REWORK -> startTime.plusHours(4);
-            case MAINTENANCE -> startTime.plusHours(8);
+            case OIL_CHANGE                -> startTime.plusMinutes(AppointmentScheduleConfig.OIL_CHANGE_DURATION_MINUTES);
+            case MANUAL_WARRANTY_REVIEW    -> startTime.plusMinutes(270);
+            case QUICK_SERVICE, UNPLANNED  -> startTime.plusMinutes(255);
+            case AUTECO_WARRANTY, REWORK   -> startTime.plusMinutes(450);
+            case MAINTENANCE               -> startTime.plusMinutes(555);
         };
     }
 

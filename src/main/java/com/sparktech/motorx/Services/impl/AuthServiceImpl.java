@@ -1,9 +1,6 @@
 package com.sparktech.motorx.Services.impl;
 
-import com.sparktech.motorx.Services.IAuthService;
-import com.sparktech.motorx.Services.IUserService;
-import com.sparktech.motorx.Services.IVerificationCodeCacheService;
-import com.sparktech.motorx.Services.IVerificationCodeService;
+import com.sparktech.motorx.Services.*;
 import com.sparktech.motorx.dto.auth.AuthResponseDTO;
 import com.sparktech.motorx.dto.auth.LoginRequestDTO;
 import com.sparktech.motorx.dto.auth.RegisterUserDTO;
@@ -26,7 +23,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Objects;
 
 @Service
 @Slf4j
@@ -36,6 +32,7 @@ public class AuthServiceImpl implements IAuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final IUserService userService;
+    private final ICurrentUserService currentUserService;
     private final CustomUserDetailsService userDetailsService;
     private final UserEntityMapper userMapper;
     private final IVerificationCodeService verificationCodeService;
@@ -105,17 +102,7 @@ public class AuthServiceImpl implements IAuthService {
     @Override
     @Transactional(readOnly = true)
     public UserDTO getCurrentUser() throws UserNotFoundException {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null || !authentication.isAuthenticated() ||
-                Objects.equals(authentication.getPrincipal(), "anonymousUser")) {
-            throw new UserNotFoundException("No hay usuario autenticado");
-        }
-
-        String email = authentication.getName();
-        UserEntity user = userDetailsService.getUserEntityByEmail(email);
-
-        return userMapper.toUserDTO(user);
+        return userMapper.toUserDTO(currentUserService.getAuthenticatedUser());
     }
 
     @Override

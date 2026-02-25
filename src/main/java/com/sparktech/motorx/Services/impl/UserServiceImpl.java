@@ -1,6 +1,7 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IAppointmentService;
+import com.sparktech.motorx.Services.ICurrentUserService;
 import com.sparktech.motorx.Services.IUserService;
 import com.sparktech.motorx.dto.appointment.*;
 import com.sparktech.motorx.dto.auth.RegisterUserDTO;
@@ -18,8 +19,6 @@ import com.sparktech.motorx.repository.JpaUserRepository;
 import com.sparktech.motorx.repository.JpaVehicleRepository;
 import com.sparktech.motorx.mapper.AppointmentMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +36,7 @@ public class UserServiceImpl implements IUserService {
     private final IAppointmentService appointmentService;
     private final AppointmentMapper appointmentMapper;
     private final PasswordEncoder passwordEncoder;
+    private final ICurrentUserService currentUserService;
 
     // ---------------------------------------------------------------
     // REGISTRO Y PERFIL
@@ -90,7 +90,7 @@ public class UserServiceImpl implements IUserService {
     @Override
     @Transactional(readOnly = true)
     public LicensePlateRestrictionResponseDTO checkLicensePlateRestriction(Long vehicleId, LocalDate date) {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
 
         VehicleEntity vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new AppointmentException(
@@ -121,14 +121,14 @@ public class UserServiceImpl implements IUserService {
     @Override
     @Transactional
     public AppointmentResponseDTO scheduleAppointment(CreateAppointmentRequestDTO request) {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
         return appointmentService.createAppointment(request, currentUser.getId());
     }
 
     @Override
     @Transactional
     public AppointmentResponseDTO cancelMyAppointment(Long appointmentId) {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
 
         var appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new AppointmentNotFoundException(appointmentId));
@@ -155,7 +155,7 @@ public class UserServiceImpl implements IUserService {
     @Override
     @Transactional(readOnly = true)
     public List<AppointmentResponseDTO> getMyAppointmentHistory() {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
         return appointmentRepository.findByClientIdOrderByDateDesc(currentUser.getId())
                 .stream()
                 .map(appointmentMapper::toResponseDTO)
@@ -165,7 +165,7 @@ public class UserServiceImpl implements IUserService {
     @Override
     @Transactional(readOnly = true)
     public List<AppointmentResponseDTO> getMyVehicleAppointments(Long vehicleId) {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
 
         VehicleEntity vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new AppointmentException(
@@ -184,7 +184,7 @@ public class UserServiceImpl implements IUserService {
     @Override
     @Transactional(readOnly = true)
     public AppointmentResponseDTO getMyAppointmentById(Long appointmentId) {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
 
         var appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new AppointmentNotFoundException(appointmentId));
@@ -194,24 +194,6 @@ public class UserServiceImpl implements IUserService {
         }
 
         return appointmentMapper.toResponseDTO(appointment);
-    }
-
-    // ---------------------------------------------------------------
-    // HELPER PRIVADO
-    // ---------------------------------------------------------------
-
-    private UserEntity getAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new IllegalStateException("No hay usuario autenticado.");
-        }
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof UserEntity userEntity) {
-            return userEntity;
-        }
-        String email = authentication.getName();
-        return jpaUserRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario autenticado no encontrado: " + email));
     }
 }
 

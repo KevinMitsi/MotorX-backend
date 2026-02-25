@@ -24,7 +24,7 @@ public record LicensePlateRestrictionResponseDTO(
                         "el " + date + ". No es posible agendar la cita para ese día.",
                 "Si tu cita es urgente, puedes llamarnos dentro del horario de atención. " +
                         "Ten en cuenta que no podemos garantizar la disponibilidad.",
-                "+57 300 000 0000", // Reemplazar con número real
+                "+57 310 8402499", // Reemplazar con número real
                 "Lunes a Viernes 7:00 AM - 5:30 PM (excepto 12:00 - 1:00 PM)"
         );
     }

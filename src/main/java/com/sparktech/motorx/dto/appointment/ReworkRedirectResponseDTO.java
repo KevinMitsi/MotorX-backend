@@ -16,8 +16,8 @@ public record ReworkRedirectResponseDTO(
         return new ReworkRedirectResponseDTO(
                 "Los reprocesos requieren atención personalizada. " +
                         "Por favor contáctanos directamente para agendar tu cita.",
-                "https://wa.me/573100000000", // Reemplazar con número real
-                "+57 310 000 0000",           // Reemplazar con número real
+                "https://wa.me/573108402499", // Reemplazar con número real
+                "+57 310 8402499",           // Reemplazar con número real
                 "Lunes a Viernes 7:00 AM - 5:30 PM (excepto 12:00 - 1:00 PM)"
         );
     }

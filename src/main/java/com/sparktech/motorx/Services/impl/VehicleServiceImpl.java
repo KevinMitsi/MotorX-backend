@@ -1,6 +1,7 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IVehicleService;
+import com.sparktech.motorx.Services.ICurrentUserService;
 import com.sparktech.motorx.dto.vehicle.CreateVehicleRequestDTO;
 import com.sparktech.motorx.dto.vehicle.UpdateVehicleRequestDTO;
 import com.sparktech.motorx.dto.vehicle.VehicleResponseDTO;
@@ -9,11 +10,8 @@ import com.sparktech.motorx.entity.VehicleEntity;
 import com.sparktech.motorx.exception.VehicleAlreadyOwnedException;
 import com.sparktech.motorx.exception.VehicleNotFoundException;
 import com.sparktech.motorx.mapper.VehicleMapper;
-import com.sparktech.motorx.repository.JpaUserRepository;
 import com.sparktech.motorx.repository.JpaVehicleRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,8 +22,8 @@ import java.util.List;
 public class VehicleServiceImpl implements IVehicleService {
 
     private final JpaVehicleRepository vehicleRepository;
-    private final JpaUserRepository userRepository;
     private final VehicleMapper vehicleMapper;
+    private final ICurrentUserService currentUserService;
 
     // ---------------------------------------------------------------
     // CRUD DE VEHÍCULOS DEL CLIENTE AUTENTICADO
@@ -34,15 +32,15 @@ public class VehicleServiceImpl implements IVehicleService {
     @Override
     @Transactional
     public VehicleResponseDTO addVehicle(CreateVehicleRequestDTO request) {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
 
         // REGLA 1: La placa debe tener formato colombiano AAA111
         // (validada por @Pattern en el DTO, pero doble check a nivel de servicio)
         String plate = request.licensePlate().toUpperCase().trim();
 
         // REGLA 2: Si la placa ya existe en el sistema, puede pertenecer a:
-        //   a) El mismo usuario (ya la tiene registrada) → error de duplicado en su lista
-        //   b) Otro usuario → advertir que contacte al administrador para cambio de dueño
+        //   a) El mismo usuario (ya la tiene registrada)  error de duplicado en su lista
+        //   b) Otro usuario  advertir que contacte al administrador para cambio de dueño
         if (vehicleRepository.existsByLicensePlate(plate)) {
             VehicleEntity existing = vehicleRepository.findByLicensePlate(plate)
                     .orElseThrow(() -> new VehicleNotFoundException(plate));
@@ -76,7 +74,7 @@ public class VehicleServiceImpl implements IVehicleService {
     @Override
     @Transactional(readOnly = true)
     public List<VehicleResponseDTO> getMyVehicles() {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
         return vehicleRepository.findByOwnerIdOrderByCreatedAtDesc(currentUser.getId())
                 .stream()
                 .map(vehicleMapper::toResponseDTO)
@@ -86,7 +84,7 @@ public class VehicleServiceImpl implements IVehicleService {
     @Override
     @Transactional(readOnly = true)
     public VehicleResponseDTO getMyVehicleById(Long vehicleId) {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
         VehicleEntity vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
 
@@ -97,7 +95,7 @@ public class VehicleServiceImpl implements IVehicleService {
     @Override
     @Transactional
     public VehicleResponseDTO updateMyVehicle(Long vehicleId, UpdateVehicleRequestDTO request) {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
         VehicleEntity vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
 
@@ -115,7 +113,7 @@ public class VehicleServiceImpl implements IVehicleService {
     @Override
     @Transactional
     public void deleteMyVehicle(Long vehicleId) {
-        UserEntity currentUser = getAuthenticatedUser();
+        UserEntity currentUser = currentUserService.getAuthenticatedUser();
         VehicleEntity vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
 
@@ -133,20 +131,4 @@ public class VehicleServiceImpl implements IVehicleService {
                     "No tienes permiso para acceder al vehículo con ID: " + vehicle.getId());
         }
     }
-
-    private UserEntity getAuthenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new IllegalStateException("No hay usuario autenticado.");
-        }
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof UserEntity userEntity) {
-            return userEntity;
-        }
-        String email = authentication.getName();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Usuario autenticado no encontrado: " + email));
-    }
 }
-
