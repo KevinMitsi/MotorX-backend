@@ -30,6 +30,9 @@ public class VehicleEntity {
     @Column(nullable = false, length = 100)
     private String model;
 
+    @Column(nullable = false)
+    private Integer yearOfManufacture;
+
     @Column(nullable = false, unique = true, length = 10)
     private String licensePlate;
 

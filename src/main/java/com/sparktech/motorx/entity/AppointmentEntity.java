@@ -48,6 +48,9 @@ public class AppointmentEntity {
     @Column(name = "client_notes", length = 500)
     private String clientNotes;
 
+    @Column(name = "current_mileage", nullable = false)
+    private Integer currentMileage;
+
     @Column(name = "admin_notes", length = 500)
     private String adminNotes;
 

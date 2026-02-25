@@ -142,6 +142,7 @@ public class AppointmentServiceImpl implements IAppointmentService {
                 .endTime(endTime)
                 .technician(assignedTechnician)
                 .status(AppointmentStatus.SCHEDULED)
+                .currentMileage(request.currentMileage())
                 .clientNotes(clientNotesStr)
                 .build();
 

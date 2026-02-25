@@ -7,6 +7,7 @@ import jakarta.validation.constraints.*;
  * Reglas de negocio:
  * - Placa obligatoria, formato colombiano: 3 letras + 3 dígitos (AAA111)
  * - Marca, cilindraje, modelo y número de chasis son obligatorios
+ * - Año de fabricación obligatorio, entre 1950 y el año actual
  */
 public record CreateVehicleRequestDTO(
 
@@ -18,9 +19,14 @@ public record CreateVehicleRequestDTO(
         @Size(max = 100, message = "El modelo no puede superar 100 caracteres")
         String model,
 
+        @NotNull(message = "El año de fabricación es obligatorio")
+        @Min(value = 1950, message = "El año de fabricación no puede ser anterior a 1950")
+        @Max(value = 2026, message = "El año de fabricación no puede ser posterior al año actual")
+        Integer yearOfManufacture,
+
         @NotBlank(message = "El número de placa es obligatorio")
         @Pattern(
-                regexp = "^[A-Z]{3}\\d{3}$",
+                regexp = "^[A-Z]{3}\\d{2}[A-Z]",
                 message = "El formato de la placa debe ser AAA111 (3 letras mayúsculas + 3 dígitos)"
         )
         String licensePlate,

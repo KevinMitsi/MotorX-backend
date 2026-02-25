@@ -12,6 +12,7 @@ public class VehicleMapper {
                 entity.getId(),
                 entity.getBrand(),
                 entity.getModel(),
+                entity.getYearOfManufacture(),
                 entity.getLicensePlate(),
                 entity.getCylinderCapacity(),
                 entity.getChassisNumber(),

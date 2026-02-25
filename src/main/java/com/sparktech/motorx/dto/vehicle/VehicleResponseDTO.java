@@ -9,6 +9,7 @@ public record VehicleResponseDTO(
         Long id,
         String brand,
         String model,
+        Integer yearOfManufacture,
         String licensePlate,
         Integer cylinderCapacity,
         String chassisNumber,
@@ -19,4 +20,3 @@ public record VehicleResponseDTO(
         LocalDateTime updatedAt
 ) {
 }
-

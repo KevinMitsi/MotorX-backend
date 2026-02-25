@@ -28,7 +28,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/user/appointments")
 @RequiredArgsConstructor
-@Tag(name = "User - Citas", description = "Endpoints para que el cliente gestione sus citas")
+@Tag(name = "User - Citas", description = "Endpoints para que el cliente gestione sus citas. Al agendar se requiere el kilometraje actual del vehículo")
 @SecurityRequirement(name = "bearerAuth")
 public class UserController {
 
@@ -100,12 +100,15 @@ public class UserController {
     @Operation(
             summary = "Agendar una cita",
             description = "Crea una nueva cita para el usuario autenticado. " +
+                    "Campos obligatorios: ID de vehículo, tipo de cita, fecha (futura), " +
+                    "hora de inicio y kilometraje actual (≥ 0). " +
                     "El sistema valida pico y placa, marca del vehículo, horario y disponibilidad " +
-                    "de técnicos. El técnico se asigna automáticamente."
+                    "de técnicos. El técnico se asigna automáticamente. " +
+                    "El kilometraje se registra como referencia para el historial de mantenimiento."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Cita agendada exitosamente"),
-            @ApiResponse(responseCode = "400", description = "Datos inválidos o horario no permitido"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos, kilometraje negativo o horario no permitido"),
             @ApiResponse(responseCode = "409", description = "Sin técnicos disponibles o pico y placa")
     })
     public ResponseEntity<@NotNull AppointmentResponseDTO> scheduleAppointment(

@@ -64,6 +64,7 @@ public class VehicleServiceImpl implements IVehicleService {
         VehicleEntity vehicle = new VehicleEntity();
         vehicle.setBrand(request.brand().trim());
         vehicle.setModel(request.model().trim());
+        vehicle.setYearOfManufacture(request.yearOfManufacture());
         vehicle.setLicensePlate(plate);
         vehicle.setCylinderCapacity(request.cylinderCapacity());
         vehicle.setChassisNumber(request.chassisNumber().trim());
