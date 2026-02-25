@@ -84,11 +84,18 @@ public class SecurityConfig {
 
 
                         .requestMatchers("/api/public/**").permitAll()
-
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll()
 
                         //Admin users
                         .requestMatchers("/api/users/admin/**").hasRole(ADMIN_ROLE)
+                        .requestMatchers("/api/v1/admin/**").hasRole(ADMIN_ROLE)
+                        .requestMatchers("/api/v1/user/**").authenticated()
                         // Cualquier otra petición requiere autenticación
                         .anyRequest().authenticated()
                 )

@@ -8,7 +8,7 @@ import com.sparktech.motorx.exception.InvalidPasswordException;
 import com.sparktech.motorx.exception.UserNotFoundException;
 
 public interface IAuthService {
-    String login(LoginRequestDTO loginRequest) throws InvalidPasswordException;
+    Object login(LoginRequestDTO loginRequest) throws InvalidPasswordException;
     AuthResponseDTO register(RegisterUserDTO registerRequest);
     UserDTO getCurrentUser() throws UserNotFoundException;
     void logout();

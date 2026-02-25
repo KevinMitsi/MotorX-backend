@@ -43,4 +43,13 @@ public interface JpaEmployeeRepository extends JpaRepository<@NotNull EmployeeEn
             WHERE e.user.email = :email
             """)
     Optional<EmployeeEntity> findByUserEmail(@Param("email") String email);
+
+    // --- Todos los técnicos activos/disponibles para asignación de citas ---
+    @Query("""
+            SELECT e FROM EmployeeEntity e
+            JOIN FETCH e.user u
+            WHERE e.state = 'AVAILABLE'
+            ORDER BY e.id ASC
+            """)
+    List<EmployeeEntity> findAllActive();
 }

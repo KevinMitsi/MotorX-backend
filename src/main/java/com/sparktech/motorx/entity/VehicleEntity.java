@@ -36,6 +36,9 @@ public class VehicleEntity {
     @Column(nullable = false)
     private Integer cylinderCapacity;
 
+    @Column(nullable = false, unique = true, length = 50)
+    private String chassisNumber;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity owner;
