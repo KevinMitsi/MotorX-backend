@@ -42,12 +42,24 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     @Transactional
-    public String login(LoginRequestDTO loginRequest) throws InvalidPasswordException {
+    public Object login(LoginRequestDTO loginRequest) throws InvalidPasswordException {
         try {
             log.info("Intentando autenticar usuario: {}", loginRequest.email());
             AuthResult result = authenticateAndBuildAuthResult(loginRequest.email(), loginRequest.password());
 
             UserEntity user = result.user;
+
+            // Si el usuario es ADMIN, omitir 2FA y devolver token directamente
+            if (com.sparktech.motorx.entity.Role.ADMIN.equals(user.getRole())) {
+                log.info("Usuario ADMIN detectado, omitiendo 2FA para: {}", loginRequest.email());
+                return new AuthResponseDTO(
+                        result.token(),
+                        user.getId(),
+                        user.getEmail(),
+                        user.getName(),
+                        user.getRole()
+                );
+            }
 
             // Generar y enviar código de verificación 2FA (se almacena automáticamente en caché)
             verificationCodeService.generateAndSendVerificationCode(user);

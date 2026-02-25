@@ -19,6 +19,10 @@ public interface JpaVehicleRepository extends JpaRepository<@NotNull VehicleEnti
 
     boolean existsByLicensePlate(String licensePlate);
 
+    boolean existsByChassisNumber(String chassisNumber);
+
+    Optional<VehicleEntity> findByChassisNumber(String chassisNumber);
+
     // --- Vehículos por propietario ---
     // Necesario para el historial de citas del cliente (Proceso 2)
     List<VehicleEntity> findByOwner(UserEntity owner);

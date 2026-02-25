@@ -26,12 +26,13 @@ public class AuthController {
     private final IAuthService authService;
 
     /**
-     * Login de usuario - Genera y envía código 2FA
+     * Login de usuario - Si es ADMIN devuelve AuthResponseDTO directamente.
+     * Para otros roles genera y envía código 2FA.
      */
     @PostMapping("/login")
-    public ResponseEntity<@NotNull String> login(@Valid @RequestBody LoginRequestDTO loginRequest) throws InvalidPasswordException {
+    public ResponseEntity<@NotNull Object> login(@Valid @RequestBody LoginRequestDTO loginRequest) throws InvalidPasswordException {
         log.info("Petición de login recibida para: {}", loginRequest.email());
-        String response = authService.login(loginRequest);
+        Object response = authService.login(loginRequest);
         return ResponseEntity.ok(response);
     }
 

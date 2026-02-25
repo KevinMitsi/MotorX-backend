@@ -81,7 +81,7 @@ public class AppointmentServiceImpl implements IAppointmentService {
             throw new ReworkNotBookableOnlineException();
         }
 
-        // 2. El tipo UNPLANNED solo lo puede crear el admin (este método es para clientes)
+        // 2. El tipo UNPLANNED solo lo puede crear el admin (este method es para clientes)
         if (request.appointmentType() == AppointmentType.UNPLANNED) {
             throw new InvalidAppointmentSlotException(
                     "Las citas no planeadas solo pueden ser creadas por el administrador."
@@ -475,12 +475,10 @@ public class AppointmentServiceImpl implements IAppointmentService {
     private LocalTime resolveEndTime(AppointmentType type, LocalTime startTime) {
         return switch (type) {
             case OIL_CHANGE -> startTime.plusMinutes(AppointmentScheduleConfig.OIL_CHANGE_DURATION_MINUTES);
-            case QUICK_SERVICE -> startTime.plusMinutes(60);
+            case QUICK_SERVICE, UNPLANNED -> startTime.plusMinutes(60);
             case MANUAL_WARRANTY_REVIEW -> startTime.plusMinutes(45);
-            case AUTECO_WARRANTY -> startTime.plusMinutes(120);
+            case AUTECO_WARRANTY, REWORK -> startTime.plusMinutes(120);
             case MAINTENANCE -> startTime.plusMinutes(180);
-            case UNPLANNED -> startTime.plusMinutes(60);
-            case REWORK -> startTime.plusMinutes(120);
         };
     }
 

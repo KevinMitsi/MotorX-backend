@@ -28,4 +28,16 @@ public record LicensePlateRestrictionResponseDTO(
                 "Lunes a Viernes 7:00 AM - 5:30 PM (excepto 12:00 - 1:00 PM)"
         );
     }
+
+    public static LicensePlateRestrictionResponseDTO noRestriction(String licensePlate, LocalDate date) {
+        return new LicensePlateRestrictionResponseDTO(
+                licensePlate,
+                date,
+                "La moto con placa " + licensePlate + " no tiene restricción de movilidad (pico y placa) " +
+                        "el " + date + ". Puedes proceder a agendar tu cita sin problemas.",
+                null,
+                null,
+                null
+        );
+    }
 }

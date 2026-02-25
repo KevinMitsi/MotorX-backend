@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class EmailNotificationServiceImpl implements IEmailNotificationService {
 
+    public static final String HOLA = "Hola ";
     @Value("${SMTP_HOST:smtp.gmail.com}")
     private String smtpHost;
 
@@ -64,7 +65,7 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
         String clientEmail = appointment.getVehicle().getOwner().getEmail();
         String clientName  = appointment.getVehicle().getOwner().getName();
         String subject = "Cita agendada - " + appointment.getAppointmentDate();
-        String body = "Hola " + clientName + ",\n\n" +
+        String body = HOLA + clientName + ",\n\n" +
                 "Tu cita ha sido agendada exitosamente.\n" +
                 "Fecha: " + appointment.getAppointmentDate() + "\n" +
                 "Hora: " + appointment.getStartTime() + "\n" +
@@ -85,7 +86,7 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
         String clientEmail = appointment.getVehicle().getOwner().getEmail();
         String clientName  = appointment.getVehicle().getOwner().getName();
         String subject = "Cita cancelada - " + appointment.getAppointmentDate();
-        String body = "Hola " + clientName + ",\n\n" +
+        String body = HOLA + clientName + ",\n\n" +
                 "Lamentamos informarte que tu cita del " + appointment.getAppointmentDate() +
                 " a las " + appointment.getStartTime() + " ha sido cancelada.\n" +
                 "Motivo: " + reason + "\n\n" +
@@ -106,7 +107,7 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
                 ? appointment.getTechnician().getUser().getName()
                 : "por asignar";
         String subject = "Actualización de tu cita - " + appointment.getAppointmentDate();
-        String body = "Hola " + clientName + ",\n\n" +
+        String body = HOLA + clientName + ",\n\n" +
                 "Tu cita del " + appointment.getAppointmentDate() + " a las " +
                 appointment.getStartTime() + " ha sido actualizada.\n" +
                 "Técnico asignado: " + techName + "\n\n" +

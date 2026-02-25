@@ -12,6 +12,7 @@ import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.entity.VehicleEntity;
 import com.sparktech.motorx.exception.AppointmentException;
 import com.sparktech.motorx.exception.AppointmentNotFoundException;
+
 import com.sparktech.motorx.repository.JpaAppointmentRepository;
 import com.sparktech.motorx.repository.JpaUserRepository;
 import com.sparktech.motorx.repository.JpaVehicleRepository;
@@ -105,7 +106,7 @@ public class UserServiceImpl implements IUserService {
         if (hasRestriction) {
             return LicensePlateRestrictionResponseDTO.of(vehicle.getLicensePlate(), date);
         }
-        return null;
+        return LicensePlateRestrictionResponseDTO.noRestriction(vehicle.getLicensePlate(), date);
     }
 
     @Override

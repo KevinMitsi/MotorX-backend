@@ -44,7 +44,7 @@ public class UserController {
             description = "Devuelve los slots disponibles para una fecha y tipo de cita. " +
                     "Un slot aparece disponible si al menos un técnico tiene ese horario libre."
     )
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Slots consultados exitosamente"),
             @ApiResponse(responseCode = "400", description = "Fecha o tipo de cita inválidos"),
             @ApiResponse(responseCode = "401", description = "No autenticado")
@@ -66,22 +66,20 @@ public class UserController {
             description = "Verifica si el vehículo tiene restricción de movilidad (pico y placa) " +
                     "en la fecha indicada. Se recomienda llamar ANTES de mostrar los slots."
     )
-    @ApiResponses({
+    @ApiResponses(value ={
             @ApiResponse(responseCode = "200", description = "Sin restricción de movilidad"),
             @ApiResponse(responseCode = "409", description = "Vehículo con pico y placa ese día")
-    })
-    public ResponseEntity<@NotNull Void> checkPlateRestriction(
+    }
+    )
+    public ResponseEntity<@NotNull LicensePlateRestrictionResponseDTO> checkPlateRestriction(
             @RequestParam Long vehicleId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         LicensePlateRestrictionResponseDTO restriction =
                 userService.checkLicensePlateRestriction(vehicleId, date);
 
-        if (restriction != null) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(restriction);
-        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(restriction);
 
-        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/rework-info")
@@ -105,7 +103,7 @@ public class UserController {
                     "El sistema valida pico y placa, marca del vehículo, horario y disponibilidad " +
                     "de técnicos. El técnico se asigna automáticamente."
     )
-    @ApiResponses({
+    @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Cita agendada exitosamente"),
             @ApiResponse(responseCode = "400", description = "Datos inválidos o horario no permitido"),
             @ApiResponse(responseCode = "409", description = "Sin técnicos disponibles o pico y placa")
@@ -145,7 +143,7 @@ public class UserController {
 
     @DeleteMapping("/my/{appointmentId}")
     @Operation(summary = "Cancelar mi cita", description = "Cancela una cita del cliente autenticado.")
-    @ApiResponses({
+    @ApiResponses(value= {
             @ApiResponse(responseCode = "200", description = "Cita cancelada exitosamente"),
             @ApiResponse(responseCode = "403", description = "La cita no pertenece al usuario")
     })
