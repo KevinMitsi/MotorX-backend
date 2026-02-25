@@ -5,10 +5,13 @@ import com.sparktech.motorx.dto.appointment.AppointmentResponseDTO;
 import com.sparktech.motorx.dto.appointment.AvailableSlotsResponseDTO;
 import com.sparktech.motorx.dto.appointment.LicensePlateRestrictionResponseDTO;
 import com.sparktech.motorx.dto.appointment.ReworkRedirectResponseDTO;
+import com.sparktech.motorx.dto.error.ResponseErrorDTO;
 import com.sparktech.motorx.entity.AppointmentType;
 import com.sparktech.motorx.Services.IUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -46,8 +49,10 @@ public class UserController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Slots consultados exitosamente"),
-            @ApiResponse(responseCode = "400", description = "Fecha o tipo de cita inválidos"),
-            @ApiResponse(responseCode = "401", description = "No autenticado")
+            @ApiResponse(responseCode = "400", description = "Fecha o tipo de cita inválidos",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull AvailableSlotsResponseDTO> getAvailableSlots(
             @Parameter(description = "Fecha deseada para la cita (yyyy-MM-dd)")
@@ -68,7 +73,10 @@ public class UserController {
     )
     @ApiResponses(value ={
             @ApiResponse(responseCode = "200", description = "Sin restricción de movilidad"),
-            @ApiResponse(responseCode = "409", description = "Vehículo con pico y placa ese día")
+            @ApiResponse(responseCode = "409", description = "Vehículo con pico y placa ese día",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Vehículo no encontrado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     }
     )
     public ResponseEntity<@NotNull LicensePlateRestrictionResponseDTO> checkPlateRestriction(
@@ -108,8 +116,12 @@ public class UserController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Cita agendada exitosamente"),
-            @ApiResponse(responseCode = "400", description = "Datos inválidos, kilometraje negativo o horario no permitido"),
-            @ApiResponse(responseCode = "409", description = "Sin técnicos disponibles o pico y placa")
+            @ApiResponse(responseCode = "400", description = "Datos inválidos, kilometraje negativo o horario no permitido",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "409", description = "Sin técnicos disponibles o pico y placa",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Vehículo no encontrado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull AppointmentResponseDTO> scheduleAppointment(
             @Valid @RequestBody CreateAppointmentRequestDTO request
@@ -148,7 +160,10 @@ public class UserController {
     @Operation(summary = "Cancelar mi cita", description = "Cancela una cita del cliente autenticado.")
     @ApiResponses(value= {
             @ApiResponse(responseCode = "200", description = "Cita cancelada exitosamente"),
-            @ApiResponse(responseCode = "403", description = "La cita no pertenece al usuario")
+            @ApiResponse(responseCode = "403", description = "La cita no pertenece al usuario",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Cita no encontrada",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull AppointmentResponseDTO> cancelMyAppointment(
             @PathVariable Long appointmentId

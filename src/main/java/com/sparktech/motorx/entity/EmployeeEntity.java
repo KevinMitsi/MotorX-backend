@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "employees",
         indexes = {
-                @Index(name = "idx_employee_user", columnList = "user_id")
+                @Index(name = "idx_employee_user",     columnList = "user_id"),
+                @Index(name = "idx_employee_position", columnList = "position")
         })
 @Getter
 @Setter
@@ -26,8 +27,9 @@ public class EmployeeEntity {
     @Column(nullable = false, updatable = false)
     private LocalDateTime hireDate;
 
-    @Column(nullable = false, length = 100)
-    private String position;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private EmployeePosition position;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

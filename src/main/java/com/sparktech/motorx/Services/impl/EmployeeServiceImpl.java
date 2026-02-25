@@ -67,7 +67,7 @@ public class EmployeeServiceImpl implements IEmployeeService {
 
         // Crear el empleado asociado al usuario
         EmployeeEntity employee = new EmployeeEntity();
-        employee.setPosition(request.position().trim());
+        employee.setPosition(request.position());
         employee.setState(EmployeeState.AVAILABLE);
         employee.setUser(savedUser);
 
@@ -97,7 +97,7 @@ public class EmployeeServiceImpl implements IEmployeeService {
         EmployeeEntity employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new EmployeeNotFoundException(employeeId));
 
-        employee.setPosition(request.position().trim());
+        employee.setPosition(request.position());
         employee.setState(request.state());
 
         return employeeMapper.toResponseDTO(employeeRepository.save(employee));
