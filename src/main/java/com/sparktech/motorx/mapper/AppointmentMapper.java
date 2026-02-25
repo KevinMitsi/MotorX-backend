@@ -39,6 +39,7 @@ public class AppointmentMapper {
                 owner.getEmail(),
                 technicianId,
                 technicianFullName,
+                entity.getCurrentMileage(),
                 entity.getClientNotes(),
                 entity.getAdminNotes(),
                 entity.getCreatedAt(),

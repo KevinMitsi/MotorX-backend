@@ -1,5 +1,6 @@
 package com.sparktech.motorx.dto.employee;
 
+import com.sparktech.motorx.entity.EmployeePosition;
 import com.sparktech.motorx.entity.EmployeeState;
 
 import java.time.LocalDateTime;
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
  */
 public record EmployeeResponseDTO(
         Long employeeId,
-        String position,
+        EmployeePosition position,
         EmployeeState state,
         LocalDateTime hireDate,
         Long userId,

@@ -1,5 +1,6 @@
 package com.sparktech.motorx.repository;
 
+import com.sparktech.motorx.entity.EmployeePosition;
 import com.sparktech.motorx.entity.EmployeeState;
 import com.sparktech.motorx.entity.EmployeeEntity;
 import org.jetbrains.annotations.NotNull;
@@ -32,7 +33,7 @@ public interface JpaEmployeeRepository extends JpaRepository<@NotNull EmployeeEn
     List<EmployeeEntity> findAvailableEmployeesWithUser();
 
     // --- Búsqueda por posición/cargo ---
-    List<EmployeeEntity> findByPositionIgnoreCase(String position);
+    List<EmployeeEntity> findByPosition(EmployeePosition position);
 
     // --- Conteo por estado (KPI administrativo) ---
     long countByState(EmployeeState state);
@@ -44,11 +45,12 @@ public interface JpaEmployeeRepository extends JpaRepository<@NotNull EmployeeEn
             """)
     Optional<EmployeeEntity> findByUserEmail(@Param("email") String email);
 
-    // --- Todos los técnicos activos/disponibles para asignación de citas ---
+    // --- Todos los mecánicos DISPONIBLES para asignación de citas ---
     @Query("""
             SELECT e FROM EmployeeEntity e
             JOIN FETCH e.user u
-            WHERE e.state = 'AVAILABLE'
+            WHERE e.position = 'MECANICO'
+              AND e.state    = 'AVAILABLE'
             ORDER BY e.id ASC
             """)
     List<EmployeeEntity> findAllActive();

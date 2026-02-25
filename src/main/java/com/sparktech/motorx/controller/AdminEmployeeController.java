@@ -4,7 +4,10 @@ import com.sparktech.motorx.Services.IEmployeeService;
 import com.sparktech.motorx.dto.employee.CreateEmployeeRequestDTO;
 import com.sparktech.motorx.dto.employee.EmployeeResponseDTO;
 import com.sparktech.motorx.dto.employee.UpdateEmployeeRequestDTO;
+import com.sparktech.motorx.dto.error.ResponseErrorDTO;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -37,8 +40,10 @@ public class AdminEmployeeController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Empleado creado exitosamente"),
-            @ApiResponse(responseCode = "400", description = "Datos inválidos"),
-            @ApiResponse(responseCode = "409", description = "El email o DNI ya están registrados")
+            @ApiResponse(responseCode = "400", description = "Datos inválidos",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "409", description = "El email o DNI ya están registrados",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull EmployeeResponseDTO> createEmployee(
             @Valid @RequestBody CreateEmployeeRequestDTO request
@@ -57,7 +62,8 @@ public class AdminEmployeeController {
     @Operation(summary = "Detalle de un empleado", description = "Obtiene la información completa de un empleado.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Empleado encontrado"),
-            @ApiResponse(responseCode = "404", description = "Empleado no encontrado")
+            @ApiResponse(responseCode = "404", description = "Empleado no encontrado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull EmployeeResponseDTO> getEmployeeById(@PathVariable Long employeeId) {
         return ResponseEntity.ok(employeeService.getEmployeeById(employeeId));
@@ -70,7 +76,10 @@ public class AdminEmployeeController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Empleado actualizado"),
-            @ApiResponse(responseCode = "404", description = "Empleado no encontrado")
+            @ApiResponse(responseCode = "400", description = "Datos inválidos",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Empleado no encontrado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull EmployeeResponseDTO> updateEmployee(
             @PathVariable Long employeeId,
@@ -87,7 +96,8 @@ public class AdminEmployeeController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Empleado eliminado"),
-            @ApiResponse(responseCode = "404", description = "Empleado no encontrado")
+            @ApiResponse(responseCode = "404", description = "Empleado no encontrado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull Object> deleteEmployee(@PathVariable Long employeeId) {
         employeeService.deleteEmployee(employeeId);

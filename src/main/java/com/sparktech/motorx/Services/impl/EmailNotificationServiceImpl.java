@@ -2,7 +2,7 @@ package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IEmailNotificationService;
 import com.sparktech.motorx.dto.notification.EmailDTO;
-import com.sparktech.motorx.entity.AppointmentEntity;
+import com.sparktech.motorx.dto.notification.AppointmentNotificationDTO;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,8 +34,7 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
     private String smtpPassword;
 
     @Override
-    @Async
-    public void sendMail(EmailDTO emailDTO) throws Exception {
+    public void sendMail(EmailDTO emailDTO) {
         log.info("Sending email to: {} ", emailDTO.recipient());
 
         Email email = EmailBuilder.startingBlank()
@@ -55,26 +54,26 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
             log.info("Email sent successfully to: {}", emailDTO.recipient());
         } catch (Exception e) {
             log.error("Error sending email to: {}", emailDTO.recipient(), e);
-            throw e;
+            // manejar localmente: log y regresar (los métodos que llaman ya están @Async)
         }
     }
 
     @Override
     @Async
-    public void sendAppointmentCreatedNotification(AppointmentEntity appointment) {
-        String clientEmail = appointment.getVehicle().getOwner().getEmail();
-        String clientName  = appointment.getVehicle().getOwner().getName();
-        String subject = "Cita agendada - " + appointment.getAppointmentDate();
+    public void sendAppointmentCreatedNotification(AppointmentNotificationDTO appointment) {
+        String clientEmail = appointment.clientEmail();
+        String clientName  = appointment.clientName();
+        String subject = "Cita agendada - " + appointment.appointmentDate();
         String body = HOLA + clientName + ",\n\n" +
                 "Tu cita ha sido agendada exitosamente.\n" +
-                "Fecha: " + appointment.getAppointmentDate() + "\n" +
-                "Hora: " + appointment.getStartTime() + "\n" +
-                "Tipo: " + appointment.getAppointmentType() + "\n" +
-                "Vehículo: " + appointment.getVehicle().getBrand() + " " +
-                appointment.getVehicle().getModel() + " (" + appointment.getVehicle().getLicensePlate() + ")\n\n" +
+                "Fecha: " + appointment.appointmentDate() + "\n" +
+                "Hora: " + appointment.startTime() + "\n" +
+                "Tipo: " + appointment.appointmentType() + "\n" +
+                "Vehículo: " + appointment.vehicleBrand() + " " +
+                appointment.vehicleModel() + " (" + appointment.licensePlate() + ")\n\n" +
                 "¡Te esperamos!\n\nJmmotoservicio";
         try {
-            sendMail(new EmailDTO(clientEmail, subject, body));
+            sendMail(new EmailDTO(subject, body, clientEmail));
         } catch (Exception e) {
             log.error("Error sending appointment created notification to: {}", clientEmail, e);
         }
@@ -82,17 +81,17 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
 
     @Override
     @Async
-    public void sendAppointmentCancelledNotification(AppointmentEntity appointment, String reason) {
-        String clientEmail = appointment.getVehicle().getOwner().getEmail();
-        String clientName  = appointment.getVehicle().getOwner().getName();
-        String subject = "Cita cancelada - " + appointment.getAppointmentDate();
+    public void sendAppointmentCancelledNotification(AppointmentNotificationDTO appointment, String reason) {
+        String clientEmail = appointment.clientEmail();
+        String clientName  = appointment.clientName();
+        String subject = "Cita cancelada - " + appointment.appointmentDate();
         String body = HOLA + clientName + ",\n\n" +
-                "Lamentamos informarte que tu cita del " + appointment.getAppointmentDate() +
-                " a las " + appointment.getStartTime() + " ha sido cancelada.\n" +
+                "Lamentamos informarte que tu cita del " + appointment.appointmentDate() +
+                " a las " + appointment.startTime() + " ha sido cancelada.\n" +
                 "Motivo: " + reason + "\n\n" +
                 "Por favor contáctanos para reagendar.\n\nJmmotoservicio";
         try {
-            sendMail(new EmailDTO(clientEmail, subject, body));
+            sendMail(new EmailDTO(subject, body, clientEmail));
         } catch (Exception e) {
             log.error("Error sending appointment cancelled notification to: {}", clientEmail, e);
         }
@@ -100,20 +99,18 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
 
     @Override
     @Async
-    public void sendAppointmentUpdatedNotification(AppointmentEntity appointment) {
-        String clientEmail = appointment.getVehicle().getOwner().getEmail();
-        String clientName  = appointment.getVehicle().getOwner().getName();
-        String techName = appointment.getTechnician() != null
-                ? appointment.getTechnician().getUser().getName()
-                : "por asignar";
-        String subject = "Actualización de tu cita - " + appointment.getAppointmentDate();
+    public void sendAppointmentUpdatedNotification(AppointmentNotificationDTO appointment) {
+        String clientEmail = appointment.clientEmail();
+        String clientName  = appointment.clientName();
+        String techName = appointment.technicianName() != null ? appointment.technicianName() : "por asignar";
+        String subject = "Actualización de tu cita - " + appointment.appointmentDate();
         String body = HOLA + clientName + ",\n\n" +
-                "Tu cita del " + appointment.getAppointmentDate() + " a las " +
-                appointment.getStartTime() + " ha sido actualizada.\n" +
+                "Tu cita del " + appointment.appointmentDate() + " a las " +
+                appointment.startTime() + " ha sido actualizada.\n" +
                 "Técnico asignado: " + techName + "\n\n" +
                 "¡Te esperamos!\n\nJmmotoservicio";
         try {
-            sendMail(new EmailDTO(clientEmail, subject, body));
+            sendMail(new EmailDTO(subject, body, clientEmail));
         } catch (Exception e) {
             log.error("Error sending appointment updated notification to: {}", clientEmail, e);
         }

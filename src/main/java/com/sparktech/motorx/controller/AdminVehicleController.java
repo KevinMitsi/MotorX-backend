@@ -1,9 +1,12 @@
 package com.sparktech.motorx.controller;
 
 import com.sparktech.motorx.Services.IEmployeeService;
+import com.sparktech.motorx.dto.error.ResponseErrorDTO;
 import com.sparktech.motorx.dto.vehicle.TransferVehicleOwnershipRequestDTO;
 import com.sparktech.motorx.dto.vehicle.VehicleResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -37,7 +40,8 @@ public class AdminVehicleController {
     @Operation(summary = "Detalle de un vehículo", description = "Obtiene la información completa de un vehículo.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Vehículo encontrado"),
-            @ApiResponse(responseCode = "404", description = "Vehículo no encontrado")
+            @ApiResponse(responseCode = "404", description = "Vehículo no encontrado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull VehicleResponseDTO> getVehicleById(@PathVariable Long vehicleId) {
         return ResponseEntity.ok(employeeService.getVehicleById(vehicleId));
@@ -52,8 +56,12 @@ public class AdminVehicleController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Propiedad transferida exitosamente"),
-            @ApiResponse(responseCode = "400", description = "El nuevo dueño no es válido o ya tiene el vehículo"),
-            @ApiResponse(responseCode = "404", description = "Vehículo o usuario no encontrado")
+            @ApiResponse(responseCode = "400", description = "El nuevo dueño no es válido o ya tiene el vehículo",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Vehículo o usuario no encontrado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "409", description = "Conflicto de propiedad del vehículo",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull VehicleResponseDTO> transferOwnership(
             @PathVariable Long vehicleId,

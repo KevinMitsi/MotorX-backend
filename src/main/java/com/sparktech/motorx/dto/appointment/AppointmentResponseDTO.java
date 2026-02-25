@@ -34,6 +34,7 @@ public record AppointmentResponseDTO(
         Long technicianId,
         String technicianFullName,
 
+        Integer currentMileage,
         String clientNotes,
         String adminNotes,
 

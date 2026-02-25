@@ -5,10 +5,13 @@ import com.sparktech.motorx.dto.appointment.CreateUnplannedAppointmentRequestDTO
 import com.sparktech.motorx.dto.appointment.UpdateAppointmentTechnicianRequestDTO;
 import com.sparktech.motorx.dto.appointment.AppointmentResponseDTO;
 import com.sparktech.motorx.dto.appointment.AvailableSlotsResponseDTO;
+import com.sparktech.motorx.dto.error.ResponseErrorDTO;
 import com.sparktech.motorx.entity.AppointmentType;
 import com.sparktech.motorx.Services.IAdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -88,7 +91,12 @@ public class AdminController {
     )
     @ApiResponses(value= {
             @ApiResponse(responseCode = "201", description = "Cita no planeada registrada"),
-            @ApiResponse(responseCode = "409", description = "Técnico no disponible o pico y placa")
+            @ApiResponse(responseCode = "404", description = "Vehículo o técnico no encontrado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "409", description = "Técnico no disponible o pico y placa",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull AppointmentResponseDTO> registerUnplannedAppointment(
             @Valid @RequestBody CreateUnplannedAppointmentRequestDTO request
@@ -118,7 +126,11 @@ public class AdminController {
     )
     @ApiResponses(value ={
             @ApiResponse(responseCode = "200", description = "Técnico actualizado exitosamente"),
-            @ApiResponse(responseCode = "409", description = "El nuevo técnico tiene ese horario ocupado")
+
+            @ApiResponse(responseCode = "404", description = "Cita o técnico no encontrado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "409", description = "El nuevo técnico tiene ese horario ocupado",
+                    content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
     public ResponseEntity<@NotNull AppointmentResponseDTO> changeTechnician(
             @PathVariable Long appointmentId,
