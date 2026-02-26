@@ -10,7 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -167,6 +169,7 @@ public class GlobalControllerAdvice {
     // EXCEPCIONES DE CITAS (AppointmentException y subclases)
     // ---------------------------------------------------------------
 
+
     @ExceptionHandler(LicensePlateRestrictionException.class)
     public ResponseEntity<@NotNull ResponseErrorDTO> handleLicensePlateRestrictionException(LicensePlateRestrictionException ex) {
         ResponseErrorDTO error = new ResponseErrorDTO(
@@ -192,6 +195,16 @@ public class GlobalControllerAdvice {
         ResponseErrorDTO error = new ResponseErrorDTO(
                 HttpStatus.CONFLICT.value(),
                 "El técnico ya tiene una cita en ese horario",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(VehicleHasActiveAppointmentException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleVehicleHasActiveAppointmentException(VehicleHasActiveAppointmentException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.CONFLICT.value(),
+                "El vehículo ya tiene una cita activa",
                 Map.of(KEY_DETAIL, ex.getMessage())
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
@@ -235,6 +248,16 @@ public class GlobalControllerAdvice {
                 Map.of(KEY_DETAIL, ex.getMessage())
         );
         return ResponseEntity.status(422).body(error);
+    }
+
+    @ExceptionHandler(AppointmentForbiddenException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleAppointmentForbiddenException(AppointmentException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.FORBIDDEN.value(),
+                "No se puedes agendar una cita de una moto que no es suya",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     /**
@@ -390,5 +413,17 @@ public class GlobalControllerAdvice {
                 )
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleMissingParams(MissingServletRequestParameterException ex) {
+        // Tu lógica para construir el cuerpo del error
+        ex.getMessage();
+        return ResponseEntity.badRequest().body(new ResponseErrorDTO(400, "Parámetro faltante",
+                Map.of(
+                        "tipo", ex.getClass().getSimpleName(),
+                        KEY_DETAIL, ex.getMessage()
+                )));
     }
 }
