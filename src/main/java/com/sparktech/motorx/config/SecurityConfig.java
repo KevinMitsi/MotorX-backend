@@ -96,6 +96,9 @@ public class SecurityConfig {
                         //Admin users
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/v1/user/**").authenticated()
+
+                        //end-points health
+                        .requestMatchers("/actuator/health").permitAll()
                         // Cualquier otra petición requiere autenticación
                         .anyRequest().authenticated()
                 )

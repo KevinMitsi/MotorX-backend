@@ -12,6 +12,7 @@ import com.sparktech.motorx.entity.Role;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.entity.VehicleEntity;
 import com.sparktech.motorx.exception.EmployeeNotFoundException;
+import com.sparktech.motorx.exception.VehicleAlreadyOwnedException;
 import com.sparktech.motorx.exception.VehicleNotFoundException;
 import com.sparktech.motorx.mapper.EmployeeMapper;
 import com.sparktech.motorx.mapper.VehicleMapper;
@@ -153,7 +154,7 @@ public class EmployeeServiceImpl implements IEmployeeService {
                 .stream()
                 .anyMatch(v -> v.getLicensePlate().equals(vehicle.getLicensePlate()));
         if (newOwnerAlreadyHasPlate) {
-            throw new IllegalArgumentException(
+            throw new VehicleAlreadyOwnedException(
                     "El nuevo propietario ya tiene registrada una moto con la placa: "
                             + vehicle.getLicensePlate());
         }

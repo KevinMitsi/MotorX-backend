@@ -114,7 +114,7 @@ public class AppointmentServiceImpl implements IAppointmentService {
 
         // 4. Verificar que el vehículo pertenece al cliente autenticado
         if (!vehicle.getOwner().getId().equals(clientId)) {
-            throw new AppointmentException("El vehículo no pertenece al usuario autenticado.");
+            throw new AppointmentForbiddenException("El vehículo no pertenece al usuario autenticado.");
         }
 
         // 5. Pico y placa
