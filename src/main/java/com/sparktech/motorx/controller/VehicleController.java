@@ -5,6 +5,7 @@ import com.sparktech.motorx.dto.error.ResponseErrorDTO;
 import com.sparktech.motorx.dto.vehicle.CreateVehicleRequestDTO;
 import com.sparktech.motorx.dto.vehicle.UpdateVehicleRequestDTO;
 import com.sparktech.motorx.dto.vehicle.VehicleResponseDTO;
+import com.sparktech.motorx.exception.VehicleDoesntBelongToUserException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -70,7 +71,7 @@ public class VehicleController {
     })
     public ResponseEntity<@NotNull VehicleResponseDTO> getMyVehicleById(
             @PathVariable Long vehicleId
-    ) {
+    ) throws VehicleDoesntBelongToUserException {
         return ResponseEntity.ok(vehicleService.getMyVehicleById(vehicleId));
     }
 
@@ -93,7 +94,7 @@ public class VehicleController {
     public ResponseEntity<@NotNull VehicleResponseDTO> updateMyVehicle(
             @PathVariable Long vehicleId,
             @Valid @RequestBody UpdateVehicleRequestDTO request
-    ) {
+    ) throws VehicleDoesntBelongToUserException {
         return ResponseEntity.ok(vehicleService.updateMyVehicle(vehicleId, request));
     }
 
@@ -106,7 +107,7 @@ public class VehicleController {
             @ApiResponse(responseCode = "404", description = "Vehículo no encontrado",
                     content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
-    public ResponseEntity<@NotNull Object> deleteMyVehicle(@PathVariable Long vehicleId) {
+    public ResponseEntity<@NotNull Object> deleteMyVehicle(@PathVariable Long vehicleId) throws VehicleDoesntBelongToUserException {
         vehicleService.deleteMyVehicle(vehicleId);
         return ResponseEntity.noContent().build();
     }

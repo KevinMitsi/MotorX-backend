@@ -12,6 +12,7 @@ import com.sparktech.motorx.entity.Role;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.entity.VehicleEntity;
 import com.sparktech.motorx.exception.AppointmentException;
+import com.sparktech.motorx.exception.AppointmentForbiddenException;
 import com.sparktech.motorx.exception.AppointmentNotFoundException;
 
 import com.sparktech.motorx.repository.JpaAppointmentRepository;
@@ -135,7 +136,7 @@ public class UserServiceImpl implements IUserService {
 
         // Solo puede cancelar sus propias citas
         if (!appointment.getVehicle().getOwner().getId().equals(currentUser.getId())) {
-            throw new AppointmentException("No tienes permiso para cancelar esta cita.");
+            throw new AppointmentForbiddenException("No tienes permiso para cancelar esta cita.");
         }
 
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {

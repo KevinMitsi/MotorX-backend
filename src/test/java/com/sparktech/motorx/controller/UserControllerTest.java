@@ -346,7 +346,8 @@ class UserControllerTest {
                             .content(json(req)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.id", is(1)))
-                    .andExpect(jsonPath("$.type", is("MAINTENANCE")))
+                    // Changed "$.type" to "$.appointmentType"
+                    .andExpect(jsonPath("$.appointmentType", is("MAINTENANCE")))
                     .andExpect(jsonPath("$.status", is("SCHEDULED")));
 
             verify(userService).scheduleAppointment(any(CreateAppointmentRequestDTO.class));
@@ -525,7 +526,7 @@ class UserControllerTest {
             // Arrange — -1 no pasa @Min(value = 0)
             CreateAppointmentRequestDTO req = new CreateAppointmentRequestDTO(
                     1L, AppointmentType.MAINTENANCE,
-                    futureDate(), LocalTime.of(9, 0), -1, null
+                    futureDate(), LocalTime.of(9, 0), -1, Set.of()
             );
 
             // Act & Assert
@@ -666,7 +667,7 @@ class UserControllerTest {
             mockMvc.perform(get("/api/v1/user/appointments/my/5"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id", is(5)))
-                    .andExpect(jsonPath("$.type", is("MAINTENANCE")))
+                    .andExpect(jsonPath("$.appointmentType", is("MAINTENANCE")))
                     .andExpect(jsonPath("$.status", is("SCHEDULED")));
 
             verify(userService).getMyAppointmentById(5L);
@@ -786,8 +787,8 @@ class UserControllerTest {
         void shouldReturn403WhenAppointmentNotOwnedByUser() throws Exception {
             // Arrange
             when(userService.cancelMyAppointment(5L))
-                    .thenThrow(new AppointmentException(
-                            "La cita no pertenece al usuaio"
+                    .thenThrow(new AppointmentForbiddenException(
+                            "La cita no pertenece al usuario"
                     ));
 
             // Act & Assert

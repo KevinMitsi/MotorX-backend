@@ -4,7 +4,10 @@ package com.sparktech.motorx.Services.impl;
 import com.sparktech.motorx.config.AppointmentScheduleConfig;
 import com.sparktech.motorx.dto.appointment.AppointmentResponseDTO;
 import com.sparktech.motorx.dto.appointment.AvailableSlotsResponseDTO;
+import com.sparktech.motorx.dto.appointment.CancelAppointmentRequestDTO;
 import com.sparktech.motorx.dto.appointment.CreateAppointmentRequestDTO;
+import com.sparktech.motorx.dto.appointment.CreateUnplannedAppointmentRequestDTO;
+import com.sparktech.motorx.dto.appointment.UpdateAppointmentTechnicianRequestDTO;
 import com.sparktech.motorx.dto.notification.AppointmentNotificationDTO;
 import com.sparktech.motorx.entity.*;
 import com.sparktech.motorx.exception.*;
@@ -14,6 +17,7 @@ import com.sparktech.motorx.repository.JpaEmployeeRepository;
 import com.sparktech.motorx.repository.JpaVehicleRepository;
 import com.sparktech.motorx.Services.IEmailNotificationService;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -800,6 +804,940 @@ class AppointmentServiceImplTest {
             // Act + Assert
             assertThatCode(() -> sut.createAppointment(request, CLIENT_ID))
                     .doesNotThrowAnyException();
+        }
+    }
+
+    // ================================================================
+    // NESTED: updateTechnician
+    // ================================================================
+    @Nested
+    @DisplayName("updateTechnician()")
+    class UpdateTechnicianTests {
+
+        private static final Long APPOINTMENT_ID = 200L;
+        private static final Long NEW_TECH_ID    = 5L;
+
+        // ----------------------------------------------------------------
+        // Builders privados
+        // ----------------------------------------------------------------
+
+        private UpdateAppointmentTechnicianRequestDTO buildRequest(boolean notify) {
+            return new UpdateAppointmentTechnicianRequestDTO(UpdateTechnicianTests.NEW_TECH_ID, notify);
+        }
+
+        private AppointmentEntity buildAppointment() {
+            UserEntity owner = new UserEntity();
+            owner.setId(10L);
+            owner.setEmail("owner@test.com");
+            owner.setName("Propietario");
+
+            VehicleEntity vehicle = new VehicleEntity();
+            vehicle.setId(1L);
+            vehicle.setLicensePlate("ABC12X");
+            vehicle.setBrand("HONDA");
+            vehicle.setModel("CB 190");
+            vehicle.setOwner(owner);
+
+            AppointmentEntity appointment = new AppointmentEntity();
+            appointment.setId(UpdateTechnicianTests.APPOINTMENT_ID);
+            appointment.setVehicle(vehicle);
+            appointment.setAppointmentType(AppointmentType.OIL_CHANGE);
+            appointment.setAppointmentDate(LocalDate.of(2099, 1, 9));
+            appointment.setStartTime(LocalTime.of(7, 0));
+            appointment.setEndTime(LocalTime.of(7, 30));
+            appointment.setStatus(AppointmentStatus.SCHEDULED);
+            return appointment;
+        }
+
+        private EmployeeEntity buildMechanic(String name) {
+            UserEntity user = new UserEntity();
+            user.setName(name);
+
+            EmployeeEntity emp = new EmployeeEntity();
+            emp.setId(UpdateTechnicianTests.NEW_TECH_ID);
+            emp.setUser(user);
+            emp.setPosition(EmployeePosition.MECANICO);
+            return emp;
+        }
+
+        private EmployeeEntity buildNonMechanic() {
+            UserEntity user = new UserEntity();
+            user.setName("Carlos Asesor");
+
+            EmployeeEntity emp = new EmployeeEntity();
+            emp.setId(UpdateTechnicianTests.NEW_TECH_ID);
+            emp.setUser(user);
+            emp.setPosition(EmployeePosition.RECEPCIONISTA);   // cualquier posición != MECANICO
+            return emp;
+        }
+
+        // ================================================================
+        // CAMINOS DE ERROR
+        // ================================================================
+
+        @Test
+        @DisplayName("Lanza AppointmentNotFoundException si la cita no existe")
+        void givenNonExistentAppointment_thenThrow() {
+            // Arrange
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.empty());
+
+            UpdateAppointmentTechnicianRequestDTO req = buildRequest(false);
+            // Act + Assert
+            assertThatThrownBy(() ->
+                    sut.updateTechnician(APPOINTMENT_ID, req)
+            )
+                    .isInstanceOf(AppointmentNotFoundException.class)
+                    .hasMessageContaining(APPOINTMENT_ID.toString());
+
+            verifyNoInteractions(technicianRepository, notificationService);
+        }
+
+        @Test
+        @DisplayName("Lanza AppointmentException si el técnico nuevo no existe")
+        void givenNonExistentTechnician_thenThrow() {
+            // Arrange
+            AppointmentEntity appointment = buildAppointment();
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appointment));
+            when(technicianRepository.findById(NEW_TECH_ID)).thenReturn(Optional.empty());
+
+            UpdateAppointmentTechnicianRequestDTO req = buildRequest(false);
+            // Act + Assert
+            assertThatThrownBy(() ->
+                    sut.updateTechnician(APPOINTMENT_ID, req)
+            )
+                    .isInstanceOf(AppointmentException.class)
+                    .hasMessageContaining(NEW_TECH_ID.toString());
+
+            verify(appointmentRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Lanza TechnicianSlotOccupiedException si el técnico ya tiene ese horario ocupado")
+        void givenBusyTechnician_thenThrowTechnicianSlotOccupiedException() {
+            // Arrange
+            AppointmentEntity appointment = buildAppointment();
+            EmployeeEntity newTech = buildMechanic("Juan Mecánico");
+
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appointment));
+            when(technicianRepository.findById(NEW_TECH_ID)).thenReturn(Optional.of(newTech));
+            when(appointmentRepository.existsTechnicianConflict(
+                    NEW_TECH_ID,
+                    appointment.getAppointmentDate(),
+                    appointment.getStartTime(),
+                    appointment.getEndTime()
+            )).thenReturn(true);
+
+            UpdateAppointmentTechnicianRequestDTO req = buildRequest(false);
+            // Act + Assert
+            assertThatThrownBy(() ->
+                    sut.updateTechnician(APPOINTMENT_ID, req)
+            )
+                    .isInstanceOf(TechnicianSlotOccupiedException.class)
+                    .hasMessageContaining("Juan Mecánico");
+
+            verify(appointmentRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Lanza IllegalArgumentException si el empleado no es MECANICO")
+        void givenNonMechanicEmployee_thenThrowIllegalArgumentException() {
+            // Arrange
+            AppointmentEntity appointment = buildAppointment();
+            EmployeeEntity nonMechanic = buildNonMechanic();
+
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appointment));
+            when(technicianRepository.findById(NEW_TECH_ID)).thenReturn(Optional.of(nonMechanic));
+            when(appointmentRepository.existsTechnicianConflict(
+                    anyLong(), any(), any(), any()
+            )).thenReturn(false);   // slot libre, pero no es mecánico
+
+            UpdateAppointmentTechnicianRequestDTO req = buildRequest(false);
+            // Act + Assert
+            assertThatThrownBy(() ->
+                    sut.updateTechnician(APPOINTMENT_ID, req)
+            )
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("técnico válido");
+
+            verify(appointmentRepository, never()).save(any());
+        }
+
+        // ================================================================
+        // CAMINOS FELICES
+        // ================================================================
+
+        @Test
+        @DisplayName("Actualiza técnico exitosamente sin notificar al cliente")
+        void givenValidRequestWithoutNotification_thenUpdateAndNotNotify() {
+            // Arrange
+            AppointmentEntity appointment = buildAppointment();
+            EmployeeEntity newTech = buildMechanic("Ana Mecánica");
+            AppointmentEntity saved = buildAppointment();
+            saved.setTechnician(newTech);
+            AppointmentResponseDTO expectedDTO = mock(AppointmentResponseDTO.class);
+
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appointment));
+            when(technicianRepository.findById(NEW_TECH_ID)).thenReturn(Optional.of(newTech));
+            when(appointmentRepository.existsTechnicianConflict(
+                    NEW_TECH_ID,
+                    appointment.getAppointmentDate(),
+                    appointment.getStartTime(),
+                    appointment.getEndTime()
+            )).thenReturn(false);
+            when(appointmentRepository.save(any(AppointmentEntity.class))).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(saved)).thenReturn(expectedDTO);
+
+            // Act
+            AppointmentResponseDTO result = sut.updateTechnician(APPOINTMENT_ID, buildRequest(false));
+
+            // Assert
+            assertThat(result).isEqualTo(expectedDTO);
+            verify(appointmentRepository, times(1)).save(argThat(apt ->
+                    apt.getTechnician() != null &&
+                            apt.getTechnician().getId().equals(NEW_TECH_ID)
+            ));
+            verify(notificationService, never()).sendAppointmentUpdatedNotification(any());
+        }
+
+        @Test
+        @DisplayName("Actualiza técnico exitosamente y notifica al cliente cuando notifyClient=true")
+        void givenValidRequestWithNotification_thenUpdateAndNotify() {
+            // Arrange
+            AppointmentEntity appointment = buildAppointment();
+            EmployeeEntity newTech = buildMechanic("Ana Mecánica");
+            AppointmentEntity saved = buildAppointment();
+            saved.setTechnician(newTech);
+
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appointment));
+            when(technicianRepository.findById(NEW_TECH_ID)).thenReturn(Optional.of(newTech));
+            when(appointmentRepository.existsTechnicianConflict(
+                    NEW_TECH_ID,
+                    appointment.getAppointmentDate(),
+                    appointment.getStartTime(),
+                    appointment.getEndTime()
+            )).thenReturn(false);
+            when(appointmentRepository.save(any(AppointmentEntity.class))).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(saved)).thenReturn(mock(AppointmentResponseDTO.class));
+
+            // Act
+            sut.updateTechnician(APPOINTMENT_ID, buildRequest(true));
+
+            // Assert — debe enviar exactamente una notificación de actualización
+            verify(notificationService, times(1))
+                    .sendAppointmentUpdatedNotification(any(AppointmentNotificationDTO.class));
+        }
+
+        @Test
+        @DisplayName("El técnico asignado en la entidad guardada es el nuevo técnico")
+        void givenValidRequest_thenSavedEntityHasNewTechnician() {
+            // Arrange
+            AppointmentEntity appointment = buildAppointment();
+            EmployeeEntity newTech = buildMechanic("Pedro Mecánico");
+            AppointmentEntity saved = buildAppointment();
+            saved.setTechnician(newTech);
+
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appointment));
+            when(technicianRepository.findById(NEW_TECH_ID)).thenReturn(Optional.of(newTech));
+            when(appointmentRepository.existsTechnicianConflict(anyLong(), any(), any(), any())).thenReturn(false);
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(any())).thenReturn(mock(AppointmentResponseDTO.class));
+
+            // Act
+            sut.updateTechnician(APPOINTMENT_ID, buildRequest(false));
+
+            // Assert — verificar que setTechnician fue aplicado antes de save
+            verify(appointmentRepository).save(argThat(apt ->
+                    apt.getTechnician() != null &&
+                            apt.getTechnician().getId().equals(NEW_TECH_ID)
+            ));
+        }
+
+        @Test
+        @DisplayName("Retorna el DTO mapeado desde la entidad guardada")
+        void givenValidRequest_thenReturnMappedDTO() {
+            // Arrange
+            AppointmentEntity appointment = buildAppointment();
+            EmployeeEntity newTech = buildMechanic("Sofía Mecánica");
+            AppointmentEntity saved = buildAppointment();
+            saved.setTechnician(newTech);
+            AppointmentResponseDTO expectedDTO = mock(AppointmentResponseDTO.class);
+
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appointment));
+            when(technicianRepository.findById(NEW_TECH_ID)).thenReturn(Optional.of(newTech));
+            when(appointmentRepository.existsTechnicianConflict(anyLong(), any(), any(), any())).thenReturn(false);
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(saved)).thenReturn(expectedDTO);
+
+            // Act
+            AppointmentResponseDTO result = sut.updateTechnician(APPOINTMENT_ID, buildRequest(false));
+
+            // Assert
+            assertThat(result).isSameAs(expectedDTO);
+        }
+    }
+
+    // ================================================================
+    // NESTED: cancelAppointment
+    // ================================================================
+    @Nested
+    @DisplayName("cancelAppointment()")
+    class CancelAppointmentTests {
+
+        private static final Long APPOINTMENT_ID = 300L;
+
+        private CancelAppointmentRequestDTO buildRequest(String reason, boolean notify) {
+            return new CancelAppointmentRequestDTO(reason, notify);
+        }
+
+        private AppointmentEntity buildAppointment(AppointmentStatus status) {
+            UserEntity owner = new UserEntity();
+            owner.setId(1L);
+            owner.setEmail("owner@test.com");
+            owner.setName("Propietario");
+
+            VehicleEntity vehicle = new VehicleEntity();
+            vehicle.setId(1L);
+            vehicle.setLicensePlate("ABC12X");
+            vehicle.setBrand("HONDA");
+            vehicle.setModel("CB 190");
+            vehicle.setOwner(owner);
+
+            return getAppointmentEntity(status, vehicle);
+        }
+
+        private @NotNull AppointmentEntity getAppointmentEntity(AppointmentStatus status, VehicleEntity vehicle) {
+            UserEntity techUser = new UserEntity();
+            techUser.setName("Técnico");
+
+            EmployeeEntity tech = new EmployeeEntity();
+            tech.setId(1L);
+            tech.setUser(techUser);
+
+            AppointmentEntity appt = new AppointmentEntity();
+            appt.setId(APPOINTMENT_ID);
+            appt.setVehicle(vehicle);
+            appt.setTechnician(tech);
+            appt.setStatus(status);
+            appt.setAppointmentType(AppointmentType.OIL_CHANGE);
+            appt.setAppointmentDate(LocalDate.of(2099, 1, 9));
+            appt.setStartTime(LocalTime.of(8, 0));
+            appt.setEndTime(LocalTime.of(8, 30));
+            return appt;
+        }
+
+        // ---- Errores ----
+
+        @Test
+        @DisplayName("Lanza AppointmentNotFoundException si la cita no existe")
+        void givenNonExistentAppointment_thenThrow() {
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.empty());
+
+            CancelAppointmentRequestDTO req = buildRequest("motivo", false);
+            assertThatThrownBy(() -> sut.cancelAppointment(APPOINTMENT_ID, req))
+                    .isInstanceOf(AppointmentNotFoundException.class)
+                    .hasMessageContaining(APPOINTMENT_ID.toString());
+
+            verify(appointmentRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Lanza AppointmentException si la cita ya está CANCELLED")
+        void givenAlreadyCancelledAppointment_thenThrow() {
+            AppointmentEntity appt = buildAppointment(AppointmentStatus.CANCELLED);
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appt));
+            CancelAppointmentRequestDTO req = buildRequest("motivo", false);
+
+            assertThatThrownBy(() -> sut.cancelAppointment(APPOINTMENT_ID, req))
+                    .isInstanceOf(AppointmentException.class)
+                    .hasMessageContaining("cancelada");
+
+            verify(appointmentRepository, never()).save(any());
+        }
+
+        // ---- Caminos felices ----
+
+        @Test
+        @DisplayName("Cancela la cita, persiste con estado CANCELLED y razón correcta")
+        void givenScheduledAppointment_thenCancelAndPersist() {
+            AppointmentEntity appt = buildAppointment(AppointmentStatus.SCHEDULED);
+            AppointmentEntity saved = buildAppointment(AppointmentStatus.CANCELLED);
+            saved.setCancellationReason("Sin tiempo");
+            AppointmentResponseDTO dto = mock(AppointmentResponseDTO.class);
+
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appt));
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(saved)).thenReturn(dto);
+
+            AppointmentResponseDTO result = sut.cancelAppointment(APPOINTMENT_ID, buildRequest("Sin tiempo", false));
+
+            assertThat(result).isEqualTo(dto);
+            verify(appointmentRepository).save(argThat(a ->
+                    a.getStatus() == AppointmentStatus.CANCELLED &&
+                    "Sin tiempo".equals(a.getCancellationReason())
+            ));
+            verify(notificationService, never()).sendAppointmentCancelledNotification(any(), any());
+        }
+
+        @Test
+        @DisplayName("Envía notificación al cliente cuando notifyClient=true")
+        void givenNotifyTrue_thenSendCancellationNotification() {
+            AppointmentEntity appt = buildAppointment(AppointmentStatus.SCHEDULED);
+            AppointmentEntity saved = buildAppointment(AppointmentStatus.CANCELLED);
+
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appt));
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(saved)).thenReturn(mock(AppointmentResponseDTO.class));
+
+            sut.cancelAppointment(APPOINTMENT_ID, buildRequest("Emergencia", true));
+
+            verify(notificationService, times(1))
+                    .sendAppointmentCancelledNotification(any(AppointmentNotificationDTO.class), eq("Emergencia"));
+        }
+
+        @Test
+        @DisplayName("No envía notificación cuando notifyClient=false")
+        void givenNotifyFalse_thenNoNotification() {
+            AppointmentEntity appt = buildAppointment(AppointmentStatus.SCHEDULED);
+            AppointmentEntity saved = buildAppointment(AppointmentStatus.CANCELLED);
+
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appt));
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(saved)).thenReturn(mock(AppointmentResponseDTO.class));
+
+            sut.cancelAppointment(APPOINTMENT_ID, buildRequest("Admin", false));
+
+            verify(notificationService, never()).sendAppointmentCancelledNotification(any(), any());
+        }
+
+        @Test
+        @DisplayName("Técnico null en cita no rompe la construcción del DTO de notificación")
+        void givenAppointmentWithNullTechnician_whenNotify_thenNoException() {
+            AppointmentEntity appt = buildAppointment(AppointmentStatus.SCHEDULED);
+            appt.setTechnician(null);
+            AppointmentEntity saved = buildAppointment(AppointmentStatus.CANCELLED);
+            saved.setTechnician(null);
+
+            when(appointmentRepository.findById(APPOINTMENT_ID)).thenReturn(Optional.of(appt));
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(saved)).thenReturn(mock(AppointmentResponseDTO.class));
+
+            assertThatCode(() -> sut.cancelAppointment(APPOINTMENT_ID, buildRequest("Motivo", true)))
+                    .doesNotThrowAnyException();
+        }
+    }
+
+    // ================================================================
+    // NESTED: createUnplannedAppointment
+    // ================================================================
+    @Nested
+    @DisplayName("createUnplannedAppointment()")
+    class CreateUnplannedAppointmentTests {
+
+        private static final Long VEHICLE_ID    = 10L;
+        private static final Long TECH_ID       = 2L;
+        private static final LocalDate VALID_DATE = LocalDate.of(2099, 1, 9); // miércoles futuro
+        private static final LocalTime VALID_TIME = LocalTime.of(8, 0);
+
+        private CreateUnplannedAppointmentRequestDTO buildReq(Long techId, String notes) {
+            return new CreateUnplannedAppointmentRequestDTO(
+                    VEHICLE_ID, AppointmentType.UNPLANNED, VALID_DATE, VALID_TIME, 5000, techId, notes
+            );
+        }
+
+        private VehicleEntity buildVehicle(String plate) {
+            UserEntity owner = new UserEntity();
+            owner.setId(1L);
+            owner.setEmail("o@test.com");
+            owner.setName("Owner");
+            VehicleEntity v = new VehicleEntity();
+            v.setId(VEHICLE_ID);
+            v.setLicensePlate(plate);
+            v.setBrand("HONDA");
+            v.setModel("CB 190");
+            v.setOwner(owner);
+            return v;
+        }
+
+        private EmployeeEntity buildMechanic(Long id) {
+            UserEntity u = new UserEntity();
+            u.setName("Mecánico " + id);
+            EmployeeEntity e = new EmployeeEntity();
+            e.setId(id);
+            e.setUser(u);
+            e.setPosition(EmployeePosition.MECANICO);
+            return e;
+        }
+
+        private AppointmentEntity buildSaved(VehicleEntity vehicle, EmployeeEntity tech) {
+            AppointmentEntity a = new AppointmentEntity();
+            a.setId(999L);
+            a.setVehicle(vehicle);
+            a.setTechnician(tech);
+            a.setAppointmentType(AppointmentType.UNPLANNED);
+            a.setAppointmentDate(VALID_DATE);
+            a.setStartTime(VALID_TIME);
+            a.setEndTime(VALID_TIME.plusMinutes(255));
+            a.setStatus(AppointmentStatus.SCHEDULED);
+            return a;
+        }
+
+        // ---- Errores ----
+
+        @Test
+        @DisplayName("Lanza AppointmentException si el vehículo no existe")
+        void givenNonExistentVehicle_thenThrow() {
+            when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.empty());
+
+            CreateUnplannedAppointmentRequestDTO req = buildReq(null, null);
+            assertThatThrownBy(() -> sut.createUnplannedAppointment(req))
+                    .isInstanceOf(AppointmentException.class)
+                    .hasMessageContaining(VEHICLE_ID.toString());
+
+            verify(appointmentRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Lanza LicensePlateRestrictionException si la placa tiene pico y placa")
+        void givenPlateWithRestriction_thenThrow() {
+            // miércoles 2099-01-09 → restringidos dígitos 9 y 0 (penúltimo dígito)
+            VehicleEntity vehicle = buildVehicle("ABC34X");
+            when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle));
+
+            CreateUnplannedAppointmentRequestDTO req = buildReq(null, null);
+            assertThatThrownBy(() -> sut.createUnplannedAppointment(req))
+                    .isInstanceOf(LicensePlateRestrictionException.class)
+                    .hasMessageContaining("ABC34X");
+        }
+
+        @Test
+        @DisplayName("Lanza AppointmentOutsideBusinessHoursException si el horario está fuera del laboral")
+        void givenTimeOutsideBusinessHours_thenThrow() {
+            VehicleEntity vehicle = buildVehicle("ABC12X");
+            when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle));
+
+            CreateUnplannedAppointmentRequestDTO req = new CreateUnplannedAppointmentRequestDTO(
+                    VEHICLE_ID, AppointmentType.UNPLANNED, VALID_DATE, LocalTime.of(6, 0), 5000, null, null
+            );
+
+            assertThatThrownBy(() -> sut.createUnplannedAppointment(req))
+                    .isInstanceOf(AppointmentOutsideBusinessHoursException.class);
+        }
+
+        @Test
+        @DisplayName("Lanza AppointmentException si el técnico asignado manualmente no existe (lambda$1)")
+        void givenNonExistentManualTechnician_thenThrow() {
+            VehicleEntity vehicle = buildVehicle("ABC12X");
+            when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle));
+            when(technicianRepository.findById(TECH_ID)).thenReturn(Optional.empty());
+
+            CreateUnplannedAppointmentRequestDTO req = buildReq(TECH_ID, null);
+            assertThatThrownBy(() -> sut.createUnplannedAppointment(req))
+                    .isInstanceOf(AppointmentException.class)
+                    .hasMessageContaining(TECH_ID.toString());
+
+            verify(appointmentRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Lanza TechnicianSlotOccupiedException si el técnico manual está ocupado (lambda$2)")
+        void givenManualTechnicianBusy_thenThrow() {
+            VehicleEntity vehicle = buildVehicle("ABC12X");
+            EmployeeEntity tech = buildMechanic(TECH_ID);
+
+            when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle));
+            when(technicianRepository.findById(TECH_ID)).thenReturn(Optional.of(tech));
+            when(appointmentRepository.existsTechnicianConflict(
+                    eq(TECH_ID), eq(VALID_DATE), eq(VALID_TIME), any(LocalTime.class)
+            )).thenReturn(true);
+
+            CreateUnplannedAppointmentRequestDTO req  = buildReq(TECH_ID, null);
+            assertThatThrownBy(() -> sut.createUnplannedAppointment(req))
+                    .isInstanceOf(TechnicianSlotOccupiedException.class)
+                    .hasMessageContaining("horario");
+
+            verify(appointmentRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Lanza NoAvailableTechnicianException en asignación automática sin técnicos libres")
+        void givenAutoAssignNoTechnicianAvailable_thenThrow() {
+            VehicleEntity vehicle = buildVehicle("ABC12X");
+            EmployeeEntity tech = buildMechanic(99L);
+
+            when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle));
+            when(technicianRepository.findAllActive()).thenReturn(List.of(tech));
+            when(appointmentRepository.existsTechnicianConflict(anyLong(), any(), any(), any()))
+                    .thenReturn(true);
+
+            CreateUnplannedAppointmentRequestDTO req = buildReq(null, null);
+            assertThatThrownBy(() -> sut.createUnplannedAppointment(req))
+                    .isInstanceOf(NoAvailableTechnicianException.class);
+        }
+
+        // ---- Caminos felices ----
+
+        @Test
+        @DisplayName("Crea cita no planeada con técnico asignado manualmente")
+        void givenManualTechnicianFree_thenPersistAndReturn() {
+            VehicleEntity vehicle = buildVehicle("ABC12X");
+            EmployeeEntity tech = buildMechanic(TECH_ID);
+            AppointmentEntity saved = buildSaved(vehicle, tech);
+            AppointmentResponseDTO dto = mock(AppointmentResponseDTO.class);
+
+            when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle));
+            when(technicianRepository.findById(TECH_ID)).thenReturn(Optional.of(tech));
+            when(appointmentRepository.existsTechnicianConflict(
+                    eq(TECH_ID), eq(VALID_DATE), eq(VALID_TIME), any()
+            )).thenReturn(false);
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(saved)).thenReturn(dto);
+
+            AppointmentResponseDTO result = sut.createUnplannedAppointment(buildReq(TECH_ID, "Nota admin"));
+
+            assertThat(result).isSameAs(dto);
+            verify(appointmentRepository, times(1)).save(argThat(a ->
+                    a.getAppointmentType() == AppointmentType.UNPLANNED &&
+                    a.getTechnician() != null &&
+                    a.getTechnician().getId().equals(TECH_ID)
+            ));
+            // No se envía notificación en citas no planeadas
+            verifyNoInteractions(notificationService);
+        }
+
+        @Test
+        @DisplayName("Crea cita no planeada con asignación automática de técnico")
+        void givenAutoAssignTechnicianFree_thenPersistAndReturn() {
+            VehicleEntity vehicle = buildVehicle("ABC12X");
+            EmployeeEntity tech = buildMechanic(TECH_ID);
+            AppointmentEntity saved = buildSaved(vehicle, tech);
+            AppointmentResponseDTO dto = mock(AppointmentResponseDTO.class);
+
+            when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle));
+            when(technicianRepository.findAllActive()).thenReturn(List.of(tech));
+            when(appointmentRepository.existsTechnicianConflict(anyLong(), any(), any(), any()))
+                    .thenReturn(false);
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(saved)).thenReturn(dto);
+
+            AppointmentResponseDTO result = sut.createUnplannedAppointment(buildReq(null, null));
+
+            assertThat(result).isSameAs(dto);
+            verify(appointmentRepository, times(1)).save(any());
+            verifyNoInteractions(notificationService);
+        }
+
+        @Test
+        @DisplayName("El tipo de la entidad guardada siempre es UNPLANNED")
+        void givenAnyRequest_thenSavedEntityTypeIsUnplanned() {
+            VehicleEntity vehicle = buildVehicle("ABC12X");
+            EmployeeEntity tech = buildMechanic(TECH_ID);
+            AppointmentEntity saved = buildSaved(vehicle, tech);
+
+            when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle));
+            when(technicianRepository.findById(TECH_ID)).thenReturn(Optional.of(tech));
+            when(appointmentRepository.existsTechnicianConflict(anyLong(), any(), any(), any()))
+                    .thenReturn(false);
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(any())).thenReturn(mock(AppointmentResponseDTO.class));
+
+            sut.createUnplannedAppointment(buildReq(TECH_ID, null));
+
+            verify(appointmentRepository).save(argThat(a ->
+                    a.getAppointmentType() == AppointmentType.UNPLANNED
+            ));
+        }
+    }
+
+    // ================================================================
+    // NESTED: resolveEndTime
+    // (método package-private accesible a través de createUnplannedAppointment)
+    // ================================================================
+    @Nested
+    @DisplayName("resolveEndTime() — verificado vía createUnplannedAppointment")
+    class ResolveEndTimeTests {
+
+        /**
+         * Invoca createUnplannedAppointment con el tipo dado y captura la entidad
+         * pasada a save(), verificando que el endTime sea el esperado.
+         */
+        private void assertEndTime(AppointmentType type, LocalTime start, long expectedMinutes) {
+            UserEntity owner = new UserEntity();
+            owner.setId(1L); owner.setEmail("e@e.com"); owner.setName("O");
+            VehicleEntity vehicle = new VehicleEntity();
+            vehicle.setId(1L); vehicle.setLicensePlate("ABC12X");
+            vehicle.setBrand("HONDA"); vehicle.setModel("CB"); vehicle.setOwner(owner);
+
+            EmployeeEntity tech = new EmployeeEntity();
+            UserEntity tu = new UserEntity(); tu.setName("T");
+            tech.setId(1L); tech.setUser(tu); tech.setPosition(EmployeePosition.MECANICO);
+
+            CreateUnplannedAppointmentRequestDTO req = new CreateUnplannedAppointmentRequestDTO(
+                    1L, type, LocalDate.of(2099, 1, 9), start, 100, 1L, null
+            );
+
+            AppointmentEntity saved = new AppointmentEntity();
+            saved.setId(1L); saved.setVehicle(vehicle); saved.setTechnician(tech);
+            saved.setAppointmentType(type);
+            saved.setAppointmentDate(LocalDate.of(2099, 1, 9));
+            saved.setStartTime(start);
+            saved.setEndTime(start.plusMinutes(expectedMinutes));
+            saved.setStatus(AppointmentStatus.SCHEDULED);
+
+            when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+            when(technicianRepository.findById(1L)).thenReturn(Optional.of(tech));
+            when(appointmentRepository.existsTechnicianConflict(anyLong(), any(), any(), any()))
+                    .thenReturn(false);
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(any())).thenReturn(mock(AppointmentResponseDTO.class));
+
+            sut.createUnplannedAppointment(req);
+
+            verify(appointmentRepository).save(argThat(a ->
+                    a.getEndTime().equals(start.plusMinutes(expectedMinutes))
+            ));
+
+            // reset para el próximo test dentro del mismo contexto
+            clearInvocations(vehicleRepository, technicianRepository,
+                    appointmentRepository, appointmentMapper);
+        }
+
+        @Test
+        @DisplayName("OIL_CHANGE → endTime = startTime + 30 min")
+        void givenOilChange_thenEndTimePlus30() {
+            assertEndTime(AppointmentType.OIL_CHANGE, LocalTime.of(8, 0),
+                    AppointmentScheduleConfig.OIL_CHANGE_DURATION_MINUTES);
+        }
+
+        @Test
+        @DisplayName("MANUAL_WARRANTY_REVIEW → endTime = startTime + 270 min")
+        void givenManualWarrantyReview_thenEndTimePlus270() {
+            assertEndTime(AppointmentType.MANUAL_WARRANTY_REVIEW, LocalTime.of(7, 0), 270);
+        }
+
+        @Test
+        @DisplayName("QUICK_SERVICE → endTime = startTime + 255 min")
+        void givenQuickService_thenEndTimePlus255() {
+            assertEndTime(AppointmentType.QUICK_SERVICE, LocalTime.of(7, 15), 255);
+        }
+
+        @Test
+        @DisplayName("UNPLANNED → endTime = startTime + 255 min")
+        void givenUnplanned_thenEndTimePlus255() {
+            assertEndTime(AppointmentType.UNPLANNED, LocalTime.of(8, 0), 255);
+        }
+
+        @Test
+        @DisplayName("AUTECO_WARRANTY → endTime = startTime + 450 min")
+        void givenAutecoWarranty_thenEndTimePlus450() {
+            assertEndTime(AppointmentType.AUTECO_WARRANTY, LocalTime.of(7, 30), 450);
+        }
+
+        @Test
+        @DisplayName("REWORK → endTime = startTime + 450 min")
+        void givenRework_thenEndTimePlus450() {
+            assertEndTime(AppointmentType.REWORK, LocalTime.of(8, 0), 450);
+        }
+
+        @Test
+        @DisplayName("MAINTENANCE → endTime = startTime + 555 min")
+        void givenMaintenance_thenEndTimePlus555() {
+            assertEndTime(AppointmentType.MAINTENANCE, LocalTime.of(7, 45), 555);
+        }
+    }
+
+    // ================================================================
+    // NESTED: getAppointmentById
+    // ================================================================
+    @Nested
+    @DisplayName("getAppointmentById()")
+    class GetAppointmentByIdTests {
+
+        @Test
+        @DisplayName("Lanza AppointmentNotFoundException si la cita no existe")
+        void givenNonExistentId_thenThrow() {
+            when(appointmentRepository.findById(999L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> sut.getAppointmentById(999L))
+                    .isInstanceOf(AppointmentNotFoundException.class)
+                    .hasMessageContaining("999");
+
+            verifyNoInteractions(appointmentMapper);
+        }
+
+        @Test
+        @DisplayName("Retorna DTO mapeado cuando la cita existe")
+        void givenExistingId_thenReturnDTO() {
+            AppointmentEntity appt = new AppointmentEntity();
+            appt.setId(1L);
+            AppointmentResponseDTO dto = mock(AppointmentResponseDTO.class);
+
+            when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appt));
+            when(appointmentMapper.toResponseDTO(appt)).thenReturn(dto);
+
+            AppointmentResponseDTO result = sut.getAppointmentById(1L);
+
+            assertThat(result).isSameAs(dto);
+            verify(appointmentMapper).toResponseDTO(appt);
+        }
+    }
+
+    // ================================================================
+    // NESTED: getAppointmentsByVehicle
+    // ================================================================
+    @Nested
+    @DisplayName("getAppointmentsByVehicle()")
+    class GetAppointmentsByVehicleTests {
+
+        @Test
+        @DisplayName("Retorna lista vacía cuando no hay citas para el vehículo")
+        void givenNoAppointments_thenReturnEmpty() {
+            when(appointmentRepository.findByVehicleIdOrderByAppointmentDateDesc(5L))
+                    .thenReturn(List.of());
+
+            List<AppointmentResponseDTO> result = sut.getAppointmentsByVehicle(5L);
+
+            assertThat(result).isEmpty();
+            verify(appointmentMapper, never()).toResponseDTO(any());
+        }
+
+        @Test
+        @DisplayName("Retorna lista mapeada para las citas encontradas")
+        void givenAppointments_thenReturnMappedList() {
+            AppointmentEntity a1 = new AppointmentEntity(); a1.setId(1L);
+            AppointmentEntity a2 = new AppointmentEntity(); a2.setId(2L);
+            AppointmentResponseDTO dto1 = mock(AppointmentResponseDTO.class);
+            AppointmentResponseDTO dto2 = mock(AppointmentResponseDTO.class);
+
+            when(appointmentRepository.findByVehicleIdOrderByAppointmentDateDesc(5L))
+                    .thenReturn(List.of(a1, a2));
+            when(appointmentMapper.toResponseDTO(a1)).thenReturn(dto1);
+            when(appointmentMapper.toResponseDTO(a2)).thenReturn(dto2);
+
+            List<AppointmentResponseDTO> result = sut.getAppointmentsByVehicle(5L);
+
+            assertThat(result).containsExactly(dto1, dto2);
+        }
+    }
+
+    // ================================================================
+    // NESTED: getAppointmentsByClient
+    // ================================================================
+    @Nested
+    @DisplayName("getAppointmentsByClient()")
+    class GetAppointmentsByClientTests {
+
+        @Test
+        @DisplayName("Retorna lista vacía cuando el cliente no tiene citas")
+        void givenNoAppointments_thenReturnEmpty() {
+            when(appointmentRepository.findByClientIdOrderByDateDesc(7L))
+                    .thenReturn(List.of());
+
+            List<AppointmentResponseDTO> result = sut.getAppointmentsByClient(7L);
+
+            assertThat(result).isEmpty();
+            verify(appointmentMapper, never()).toResponseDTO(any());
+        }
+
+        @Test
+        @DisplayName("Retorna lista mapeada para las citas del cliente")
+        void givenAppointments_thenReturnMappedList() {
+            AppointmentEntity a1 = new AppointmentEntity(); a1.setId(10L);
+            AppointmentEntity a2 = new AppointmentEntity(); a2.setId(11L);
+            AppointmentResponseDTO dto1 = mock(AppointmentResponseDTO.class);
+            AppointmentResponseDTO dto2 = mock(AppointmentResponseDTO.class);
+
+            when(appointmentRepository.findByClientIdOrderByDateDesc(7L))
+                    .thenReturn(List.of(a1, a2));
+            when(appointmentMapper.toResponseDTO(a1)).thenReturn(dto1);
+            when(appointmentMapper.toResponseDTO(a2)).thenReturn(dto2);
+
+            List<AppointmentResponseDTO> result = sut.getAppointmentsByClient(7L);
+
+            assertThat(result).containsExactly(dto1, dto2);
+        }
+    }
+
+    // ================================================================
+    // NESTED: getAppointmentsByDate
+    // ================================================================
+    @Nested
+    @DisplayName("getAppointmentsByDate()")
+    class GetAppointmentsByDateTests {
+
+        private static final LocalDate DATE = LocalDate.of(2099, 1, 9);
+
+        @Test
+        @DisplayName("Retorna lista vacía si no hay citas ese día")
+        void givenNoAppointments_thenReturnEmpty() {
+            when(appointmentRepository.findByAppointmentDateOrderByStartTime(DATE))
+                    .thenReturn(List.of());
+
+            List<AppointmentResponseDTO> result = sut.getAppointmentsByDate(DATE);
+
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Retorna la lista mapeada de citas para la fecha dada")
+        void givenAppointments_thenReturnMappedList() {
+            AppointmentEntity a1 = new AppointmentEntity(); a1.setId(20L);
+            AppointmentResponseDTO dto1 = mock(AppointmentResponseDTO.class);
+
+            when(appointmentRepository.findByAppointmentDateOrderByStartTime(DATE))
+                    .thenReturn(List.of(a1));
+            when(appointmentMapper.toResponseDTO(a1)).thenReturn(dto1);
+
+            List<AppointmentResponseDTO> result = sut.getAppointmentsByDate(DATE);
+
+            assertThat(result).containsExactly(dto1);
+        }
+    }
+
+    // ================================================================
+    // NESTED: getAppointmentsByDateRange
+    // ================================================================
+    @Nested
+    @DisplayName("getAppointmentsByDateRange()")
+    class GetAppointmentsByDateRangeTests {
+
+        private static final LocalDate START = LocalDate.of(2099, 1, 6);
+        private static final LocalDate END   = LocalDate.of(2099, 1, 10);
+
+        @Test
+        @DisplayName("Retorna lista vacía si no hay citas en el rango")
+        void givenNoAppointments_thenReturnEmpty() {
+            when(appointmentRepository.findByDateRange(START, END)).thenReturn(List.of());
+
+            List<AppointmentResponseDTO> result = sut.getAppointmentsByDateRange(START, END);
+
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Retorna lista mapeada de todas las citas en el rango")
+        void givenAppointments_thenReturnMappedList() {
+            AppointmentEntity a1 = new AppointmentEntity(); a1.setId(30L);
+            AppointmentEntity a2 = new AppointmentEntity(); a2.setId(31L);
+            AppointmentResponseDTO dto1 = mock(AppointmentResponseDTO.class);
+            AppointmentResponseDTO dto2 = mock(AppointmentResponseDTO.class);
+
+            when(appointmentRepository.findByDateRange(START, END)).thenReturn(List.of(a1, a2));
+            when(appointmentMapper.toResponseDTO(a1)).thenReturn(dto1);
+            when(appointmentMapper.toResponseDTO(a2)).thenReturn(dto2);
+
+            List<AppointmentResponseDTO> result = sut.getAppointmentsByDateRange(START, END);
+
+            assertThat(result).containsExactly(dto1, dto2);
+        }
+
+        @Test
+        @DisplayName("Pasa exactamente los parámetros start y end al repositorio")
+        void givenRange_thenRepositoryCalledWithCorrectParams() {
+            when(appointmentRepository.findByDateRange(START, END)).thenReturn(List.of());
+
+            sut.getAppointmentsByDateRange(START, END);
+
+            verify(appointmentRepository).findByDateRange(START, END);
         }
     }
 }
