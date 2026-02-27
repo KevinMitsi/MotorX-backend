@@ -8,6 +8,7 @@ import com.sparktech.motorx.dto.vehicle.TransferVehicleOwnershipRequestDTO;
 import com.sparktech.motorx.dto.vehicle.VehicleResponseDTO;
 import com.sparktech.motorx.entity.*;
 import com.sparktech.motorx.exception.EmployeeNotFoundException;
+import com.sparktech.motorx.exception.VehicleAlreadyOwnedException;
 import com.sparktech.motorx.exception.VehicleNotFoundException;
 import com.sparktech.motorx.mapper.EmployeeMapper;
 import com.sparktech.motorx.mapper.VehicleMapper;
@@ -527,7 +528,7 @@ class EmployeeServiceImplTest {
         }
 
         @Test
-        @DisplayName("Lanza IllegalArgumentException si el nuevo propietario ya tiene una moto con la misma placa")
+        @DisplayName("Lanza VehicleAlreadyOwnedException si el nuevo propietario ya tiene una moto con la misma placa")
         void givenNewOwnerAlreadyHasPlate_thenThrow() {
             // Arrange
             Long vehicleId = 10L;
@@ -546,7 +547,7 @@ class EmployeeServiceImplTest {
 
             // Act + Assert
             assertThatThrownBy(() -> sut.transferVehicleOwnership(vehicleId, request))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(VehicleAlreadyOwnedException.class)
                     .hasMessageContaining(plate);
 
             verify(vehicleRepository, never()).save(any());

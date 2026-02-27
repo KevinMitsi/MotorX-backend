@@ -3,6 +3,7 @@ package com.sparktech.motorx.Services;
 import com.sparktech.motorx.dto.vehicle.CreateVehicleRequestDTO;
 import com.sparktech.motorx.dto.vehicle.UpdateVehicleRequestDTO;
 import com.sparktech.motorx.dto.vehicle.VehicleResponseDTO;
+import com.sparktech.motorx.exception.VehicleDoesntBelongToUserException;
 
 import java.util.List;
 
@@ -28,17 +29,17 @@ public interface IVehicleService {
     /**
      * Obtiene el detalle de un vehículo específico del usuario autenticado.
      */
-    VehicleResponseDTO getMyVehicleById(Long vehicleId);
+    VehicleResponseDTO getMyVehicleById(Long vehicleId) throws VehicleDoesntBelongToUserException;
 
     /**
      * Actualiza marca, modelo y cilindraje de un vehículo del usuario autenticado.
      * La placa y el número de chasis no son modificables.
      */
-    VehicleResponseDTO updateMyVehicle(Long vehicleId, UpdateVehicleRequestDTO request);
+    VehicleResponseDTO updateMyVehicle(Long vehicleId, UpdateVehicleRequestDTO request) throws VehicleDoesntBelongToUserException;
 
     /**
      * Elimina un vehículo del usuario autenticado.
      */
-    void deleteMyVehicle(Long vehicleId);
+    void deleteMyVehicle(Long vehicleId) throws VehicleDoesntBelongToUserException;
 }
 

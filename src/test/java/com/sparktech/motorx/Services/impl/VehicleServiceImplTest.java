@@ -7,6 +7,7 @@ import com.sparktech.motorx.dto.vehicle.VehicleResponseDTO;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.entity.VehicleEntity;
 import com.sparktech.motorx.exception.VehicleAlreadyOwnedException;
+import com.sparktech.motorx.exception.VehicleDoesntBelongToUserException;
 import com.sparktech.motorx.exception.VehicleNotFoundException;
 import com.sparktech.motorx.mapper.VehicleMapper;
 import com.sparktech.motorx.repository.JpaVehicleRepository;
@@ -261,7 +262,7 @@ class VehicleServiceImplTest {
 
         @Test
         @DisplayName("Retorna DTO cuando el vehículo pertenece al usuario autenticado")
-        void givenOwnVehicle_thenReturnDTO() {
+        void givenOwnVehicle_thenReturnDTO() throws VehicleDoesntBelongToUserException {
             // Arrange
             UserEntity user = buildUser(1L);
             VehicleEntity vehicle = buildVehicle(10L, "ABC123", user);
@@ -291,7 +292,7 @@ class VehicleServiceImplTest {
         }
 
         @Test
-        @DisplayName("Lanza SecurityException si el vehículo pertenece a otro usuario")
+        @DisplayName("Lanza VehicleDoesntBelongToUserException si el vehículo pertenece a otro usuario")
         void givenVehicleOfAnotherUser_thenThrowSecurityException() {
             // Arrange
             UserEntity currentUser = buildUser(1L);
@@ -303,7 +304,7 @@ class VehicleServiceImplTest {
 
             // Act + Assert
             assertThatThrownBy(() -> sut.getMyVehicleById(10L))
-                    .isInstanceOf(SecurityException.class)
+                    .isInstanceOf(VehicleDoesntBelongToUserException.class)
                     .hasMessageContaining("10");
         }
     }
@@ -322,7 +323,7 @@ class VehicleServiceImplTest {
 
         @Test
         @DisplayName("Actualiza marca, modelo y cilindraje; placa y chasis son inmutables")
-        void givenValidRequest_thenUpdateMutableFieldsOnly() {
+        void givenValidRequest_thenUpdateMutableFieldsOnly() throws VehicleDoesntBelongToUserException {
             // Arrange
             UserEntity user    = buildUser(1L);
             VehicleEntity vehicle = buildVehicle(10L, "ABC123", user);
@@ -351,7 +352,7 @@ class VehicleServiceImplTest {
 
         @Test
         @DisplayName("Marca y modelo se trimmean antes de persistir")
-        void givenRequestWithSpaces_thenTrimBeforePersist() {
+        void givenRequestWithSpaces_thenTrimBeforePersist() throws VehicleDoesntBelongToUserException {
             // Arrange
             UserEntity user = buildUser(1L);
             VehicleEntity vehicle = buildVehicle(10L, "ABC123", user);
@@ -387,7 +388,7 @@ class VehicleServiceImplTest {
         }
 
         @Test
-        @DisplayName("Lanza SecurityException si el vehículo pertenece a otro usuario")
+        @DisplayName("Lanza VehicleDoesntBelongToUserException si el vehículo pertenece a otro usuario")
         void givenVehicleOfAnotherUser_thenThrow() {
             // Arrange
             UserEntity currentUser = buildUser(1L);
@@ -400,7 +401,7 @@ class VehicleServiceImplTest {
             UpdateVehicleRequestDTO updateVehicleRequestDTO = buildUpdateRequest();
             // Act + Assert
             assertThatThrownBy(() -> sut.updateMyVehicle(10L, updateVehicleRequestDTO))
-                    .isInstanceOf(SecurityException.class);
+                    .isInstanceOf(VehicleDoesntBelongToUserException.class);
 
             verify(vehicleRepository, never()).save(any());
         }
@@ -447,7 +448,7 @@ class VehicleServiceImplTest {
         }
 
         @Test
-        @DisplayName("Lanza SecurityException si el vehículo pertenece a otro usuario")
+        @DisplayName("Lanza VehicleDoesntBelongToUserException si el vehículo pertenece a otro usuario")
         void givenVehicleOfAnotherUser_thenThrow() {
             // Arrange
             UserEntity currentUser = buildUser(1L);
@@ -459,7 +460,7 @@ class VehicleServiceImplTest {
 
             // Act + Assert
             assertThatThrownBy(() -> sut.deleteMyVehicle(10L))
-                    .isInstanceOf(SecurityException.class);
+                    .isInstanceOf(VehicleDoesntBelongToUserException.class);
 
             verify(vehicleRepository, never()).delete(any());
         }

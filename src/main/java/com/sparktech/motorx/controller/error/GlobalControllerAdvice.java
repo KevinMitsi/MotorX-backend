@@ -257,7 +257,7 @@ public class GlobalControllerAdvice {
                 "No se puedes agendar una cita de una moto que no es suya",
                 Map.of(KEY_DETAIL, ex.getMessage())
         );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     /**
@@ -426,4 +426,26 @@ public class GlobalControllerAdvice {
                         KEY_DETAIL, ex.getMessage()
                 )));
     }
+
+
+    @ExceptionHandler(ChasisAlreadyRegisteredException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleChasisAlreadyRegisteredException(ChasisAlreadyRegisteredException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.CONFLICT.value(),
+                "Número de chasis ya registrado",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(VehicleDoesntBelongToUserException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleVehicleDoesntBelongToUserException(VehicleDoesntBelongToUserException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.FORBIDDEN.value(),
+                "El vehículo no pertenece al usuario autenticado",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
 }

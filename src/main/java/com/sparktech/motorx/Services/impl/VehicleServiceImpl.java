@@ -8,6 +8,7 @@ import com.sparktech.motorx.dto.vehicle.VehicleResponseDTO;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.entity.VehicleEntity;
 import com.sparktech.motorx.exception.VehicleAlreadyOwnedException;
+import com.sparktech.motorx.exception.VehicleDoesntBelongToUserException;
 import com.sparktech.motorx.exception.VehicleNotFoundException;
 import com.sparktech.motorx.mapper.VehicleMapper;
 import com.sparktech.motorx.repository.JpaVehicleRepository;
@@ -83,7 +84,7 @@ public class VehicleServiceImpl implements IVehicleService {
 
     @Override
     @Transactional(readOnly = true)
-    public VehicleResponseDTO getMyVehicleById(Long vehicleId) {
+    public VehicleResponseDTO getMyVehicleById(Long vehicleId) throws VehicleDoesntBelongToUserException {
         UserEntity currentUser = currentUserService.getAuthenticatedUser();
         VehicleEntity vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
@@ -94,7 +95,7 @@ public class VehicleServiceImpl implements IVehicleService {
 
     @Override
     @Transactional
-    public VehicleResponseDTO updateMyVehicle(Long vehicleId, UpdateVehicleRequestDTO request) {
+    public VehicleResponseDTO updateMyVehicle(Long vehicleId, UpdateVehicleRequestDTO request) throws VehicleDoesntBelongToUserException {
         UserEntity currentUser = currentUserService.getAuthenticatedUser();
         VehicleEntity vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
@@ -112,7 +113,7 @@ public class VehicleServiceImpl implements IVehicleService {
 
     @Override
     @Transactional
-    public void deleteMyVehicle(Long vehicleId) {
+    public void deleteMyVehicle(Long vehicleId) throws VehicleDoesntBelongToUserException {
         UserEntity currentUser = currentUserService.getAuthenticatedUser();
         VehicleEntity vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new VehicleNotFoundException(vehicleId));
@@ -125,9 +126,9 @@ public class VehicleServiceImpl implements IVehicleService {
     // HELPERS PRIVADOS
     // ---------------------------------------------------------------
 
-    private void validateOwnership(VehicleEntity vehicle, UserEntity user) {
+    private void validateOwnership(VehicleEntity vehicle, UserEntity user) throws VehicleDoesntBelongToUserException {
         if (!vehicle.getOwner().getId().equals(user.getId())) {
-            throw new SecurityException(
+            throw new VehicleDoesntBelongToUserException(
                     "No tienes permiso para acceder al vehículo con ID: " + vehicle.getId());
         }
     }
