@@ -27,15 +27,22 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
     @Value("${SMTP_PORT:587}")
     private int smtpPort;
 
-    @Value("${SMTP_USERNAME:kegarrapala.2003@gmail.com}")
+    // Removed hard-coded default username and password - must be provided by environment (docker)
+    @Value("${SMTP_USERNAME}")
     private String smtpUsername;
 
-    @Value("${SMTP_PASSWORD:tbta upjg guxo oprh}")
+    @Value("${SMTP_PASSWORD}")
     private String smtpPassword;
 
     @Override
     public void sendMail(EmailDTO emailDTO) {
         log.info("Sending email to: {} ", emailDTO.recipient());
+
+        // Guard against missing credentials (to avoid runtime NPEs if env not provided)
+        if (smtpUsername == null || smtpUsername.isBlank() || smtpPassword == null || smtpPassword.isBlank()) {
+            log.error("SMTP credentials are not configured. Set SMTP_USERNAME and SMTP_PASSWORD in the environment before sending emails.");
+            return;
+        }
 
         Email email = EmailBuilder.startingBlank()
                 .from(smtpUsername)

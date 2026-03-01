@@ -1,30 +1,23 @@
 version: "3.9"
 
 services:
-  motorx-db:
-    image: postgres:16
-    container_name: motorx-postgres
+  motorx-app:
+    image: kevinmitsi/motorx-backend:v1
+    container_name: motorx-app
     restart: always
 
     environment:
-      POSTGRES_DB: motorx
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      PGDATA: /var/lib/postgresql/data/pgdata
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-motorx}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      # SMTP credentials must be provided via environment when deploying to production
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+
+      SPRING_PROFILES_ACTIVE: prod
 
     ports:
-      - "5432:5432"
-
-    volumes:
-      - motorx_data:/var/lib/postgresql/data
-
-    networks:
-      - motorx-network
-
-volumes:
-  motorx_data:
-    driver: local
-
-networks:
-  motorx-network:
-    driver: bridge
+      - "${PORT:-8080}:8080"
