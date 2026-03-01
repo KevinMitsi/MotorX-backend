@@ -11,12 +11,13 @@ spring:
       hibernate:
         format_sql: false
   datasource:
-    url: jdbc:postgresql:///${DB_NAME}?cloudSqlInstance=${DB_HOST}&socketFactory=com.google.cloud.sql.postgres.SocketFactory
+    url: jdbc:postgresql:///${DB_NAME}?cloudSqlInstance=${DB_HOST}&socketFactory=com.google.cloud.sql.postgres.SocketFactory&ipTypes=PRIVATE,PUBLIC
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     hikari:
       minimum-idle: 2
       maximum-pool-size: 5
+      connection-timeout: 30000
 
   security:
     debug: false                       # Deshabilitar debug de seguridad en producción
