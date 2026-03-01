@@ -1,0 +1,33 @@
+# ============================================================
+# Perfil de PRODUCCIÓN - AWS
+# Sobreescribe valores del application.yaml base
+# Activar con: SPRING_PROFILES_ACTIVE=prod
+# ============================================================
+
+spring:
+  jpa:
+    show-sql: false                    # No mostrar SQL en producción
+    properties:
+      hibernate:
+        format_sql: false
+
+  security:
+    debug: false                       # Deshabilitar debug de seguridad en producción
+
+# ============================================================
+# LOGGING - Reducido para producción
+# ============================================================
+logging:
+  level:
+    root: WARN
+    com.sparktech.motorx: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+    org.flywaydb: INFO
+    org.springframework.security: WARN
+    org.springframework.security.web: WARN
+    org.springframework.security.filter.FilterChainProxy: WARN
+    org.springframework.security.authentication: WARN
+    org.springframework.security.web.authentication: WARN
+    org.springframework.security.web.access: WARN
+

@@ -7,9 +7,9 @@ spring:
   # ============================================================
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:motorx}
-    username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:password}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:motorx}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:password}
     hikari:
       connection-timeout: 20000        # Tiempo máximo esperando conexión del pool (ms)
       minimum-idle: 5                  # Conexiones mínimas mantenidas en el pool
