@@ -58,7 +58,6 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: kevinmitsi/motorx-backend:v1
-          cloudsql-instances: ${{ env.CLOUD_SQL_CONNECTION }}
           env_vars: |
             SPRING_PROFILES_ACTIVE=prod
           secrets: |
@@ -70,6 +69,7 @@ jobs:
             SMTP_USERNAME=motorx-smtp-username:latest
             SMTP_PASSWORD=motorx-smtp-password:latest
           flags: |
+            --add-cloudsql-instances=${{ env.CLOUD_SQL_CONNECTION }}
             --allow-unauthenticated
             --memory=512Mi
             --cpu=1
