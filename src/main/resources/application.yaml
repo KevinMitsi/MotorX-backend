@@ -13,7 +13,7 @@ spring:
     hikari:
       connection-timeout: 20000        # Tiempo máximo esperando conexión del pool (ms)
       minimum-idle: 5                  # Conexiones mínimas mantenidas en el pool
-      maximum-pool-size: 10            # Máximo de conexiones simultáneas
+      maximum-pool-size: 30            # Máximo de conexiones simultáneas
       idle-timeout: 300000             # Tiempo antes de cerrar una conexión idle (ms)
       max-lifetime: 1200000            # Vida máxima de una conexión en el pool (ms)
       connection-test-query: SELECT 1  # Query de validación de conexión viva
