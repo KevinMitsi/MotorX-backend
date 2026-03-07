@@ -35,6 +35,7 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
     private String smtpPassword;
 
     @Override
+    @Async
     public void sendMail(EmailDTO emailDTO) {
         log.info("Sending email to: {} ", emailDTO.recipient());
 
