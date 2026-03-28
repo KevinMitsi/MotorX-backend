@@ -19,6 +19,15 @@ spring:
       maximum-pool-size: 5
       connection-timeout: 5000
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    tags:
+        application: motorx-backend
+
   security:
     debug: false                       # Deshabilitar debug de seguridad en producción
 

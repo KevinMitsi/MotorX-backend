@@ -92,12 +92,14 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
+
                         //Admin users
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/v1/user/**").authenticated()
 
                         //end-points health
-                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
+
                         // Cualquier otra petición requiere autenticación
                         .anyRequest().authenticated()
                 )
