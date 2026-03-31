@@ -68,7 +68,8 @@ Se instrumentaron logs de exito/fallo en:
   - solicitud de recuperacion
   - confirmacion de cambio de contrasena
 
-> Nota: Este modulo es de auditoria interna y **no expone endpoints nuevos publicos** en estos commits.
+> Nota: En los commits originalmente documentados este modulo era interno y sin endpoint publico.
+> En la actualizacion posterior se agrego un endpoint administrativo para consulta de logs (ver seccion 7).
 
 ---
 
@@ -227,7 +228,8 @@ En `JpaAppointmentRepository` se agrego:
 ## 5) Resumen de impacto en API
 
 - Se mantiene vigente todo lo de `APIDOC.md`.
-- Se agregan 5 endpoints nuevos solo para ADMIN en `/api/v1/admin/metrics/**`.
+- Se agregan 5 endpoints ADMIN en `/api/v1/admin/metrics/**`.
+- Se agrega 1 endpoint ADMIN en `/api/v1/admin/logs` para consulta de auditoria paginada.
 - Se agregan capacidades internas de auditoria y observabilidad (logs + metricas).
 - Se mantienen respuestas JSON estandar para errores `401` y `403`, ahora instrumentadas para metricas.
 
@@ -242,6 +244,78 @@ En `JpaAppointmentRepository` se agrego:
 | `GET` | `/api/v1/admin/metrics/maintainability` | 🔒 Solo ADMIN |
 | `GET` | `/api/v1/admin/metrics/appointments` | 🔒 Solo ADMIN |
 | `GET` | `/api/v1/admin/metrics/summary` | 🔒 Solo ADMIN |
+| `GET` | `/api/v1/admin/logs` | 🔒 Solo ADMIN |
+
+---
+
+## 7) Actualizacion posterior: consulta administrativa de logs
+
+Se agrego `LogController` para exponer los logs de auditoria con filtros y paginacion sobre la infraestructura ya existente (`LogEntity`, `ILogService`, `LogServiceImpl`, `JpaLogRepository`).
+
+### Base path
+
+`/api/v1/admin/logs`
+
+### Seguridad
+
+- Requiere autenticacion JWT
+- Requiere rol `ROLE_ADMIN`
+- Respetan politicas de `/api/v1/admin/**`
+
+### Endpoint
+
+| Metodo | Endpoint | Descripcion | Respuesta |
+|---|---|---|---|
+| `GET` | `/api/v1/admin/logs` | Consulta paginada de logs con filtros opcionales por modulo, accion, resultado, actor y fechas | `LogPageResponseDTO` |
+
+### Query params soportados
+
+- `serviceName` (`AUTHENTICATION`, `USER`, `PASSWORD_RESET`, `APPOINTMENT`, `VEHICLE`, `ADMIN`)
+- `actionType` (`LOGIN`, `REGISTER`, `LOGOUT`, `VERIFY_2FA`, `REFRESH_TOKEN`, `PASSWORD_RESET_REQUEST`, `PASSWORD_RESET_CONFIRM`, `UPDATE_USER_PROFILE`, `SCHEDULE_APPOINTMENT`, `CANCEL_APPOINTMENT`)
+- `result` (`SUCCESS`, `FAILURE`)
+- `actorEmail` (coincidencia parcial)
+- `actorUserId`
+- `from` (ISO-8601 `LocalDateTime`)
+- `to` (ISO-8601 `LocalDateTime`)
+- Paginacion Spring: `page`, `size`, `sort`
+
+Valores por defecto de paginacion:
+
+- `size=20`
+- `sort=createdAt,desc`
+
+### Ejemplo de respuesta (`LogPageResponseDTO`)
+
+```json
+{
+  "content": [
+    {
+      "id": 7,
+      "serviceName": "AUTHENTICATION",
+      "actionType": "LOGIN",
+      "result": "SUCCESS",
+      "actorEmail": "admin@motorx.com",
+      "actorUserId": 5,
+      "message": "Inicio de sesion exitoso",
+      "createdAt": "2026-03-31T10:15:00"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1,
+  "first": true,
+  "last": true,
+  "empty": false
+}
+```
+
+### Respuestas de error documentadas
+
+- `400` parametros invalidos (por ejemplo enums no validos)
+- `401` no autenticado
+- `403` sin permisos ADMIN
+- `500` error interno del servidor
 
 ---
 

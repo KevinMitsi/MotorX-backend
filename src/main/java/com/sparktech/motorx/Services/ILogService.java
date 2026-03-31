@@ -1,9 +1,16 @@
 package com.sparktech.motorx.Services;
 
+import com.sparktech.motorx.dto.log.LogFilterRequestDTO;
 import com.sparktech.motorx.entity.LogActionType;
+import com.sparktech.motorx.entity.LogEntity;
 import com.sparktech.motorx.entity.LogServiceName;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface ILogService {
+
+    Page<@NotNull LogEntity> findLogs(LogFilterRequestDTO filter, Pageable pageable);
 
     void logSuccess(LogServiceName serviceName,
                     LogActionType actionType,
