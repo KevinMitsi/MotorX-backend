@@ -28,10 +28,10 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
     private int smtpPort;
 
     // Removed hard-coded default username and password - must be provided by environment (docker)
-    @Value("${SMTP_USERNAME:}")
+    @Value("${SMTP_USERNAME:kegarrapala.2003@gmail.com}")
     private String smtpUsername;
 
-    @Value("${SMTP_PASSWORD:}")
+    @Value("${SMTP_PASSWORD:tbta upjg guxo oprh}")
     private String smtpPassword;
 
     @Override
