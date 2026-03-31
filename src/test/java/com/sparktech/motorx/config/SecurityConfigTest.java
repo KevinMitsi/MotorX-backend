@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.DefaultSecurityFilterChain;
@@ -40,11 +40,14 @@ class SecurityConfigTest {
     }
 
     @Test
-    @DisplayName("authenticationManager delega a AuthenticationConfiguration")
-    void shouldGetAuthenticationManagerFromConfiguration() {
-        AuthenticationConfiguration authenticationConfiguration = mock(AuthenticationConfiguration.class);
-        AuthenticationManager authenticationManager = mock(AuthenticationManager.class);
-        when(authenticationConfiguration.getAuthenticationManager()).thenReturn(authenticationManager);
+    @DisplayName("authenticationManager usa AuthenticationProvider configurado")
+    void shouldCreateAuthenticationManagerFromProvider() {
+        AuthenticationProvider authenticationProvider = mock(AuthenticationProvider.class);
+        var request = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken("user@test.com", "pass123");
+        var expected = mock(org.springframework.security.core.Authentication.class);
+
+        when(authenticationProvider.supports(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.class)).thenReturn(true);
+        when(authenticationProvider.authenticate(request)).thenReturn(expected);
 
         SecurityConfig config = new SecurityConfig(
                 mock(CustomUserDetailsService.class),
@@ -54,9 +57,10 @@ class SecurityConfigTest {
                 mock(MetricsAccessDeniedHandler.class)
         );
 
-        AuthenticationManager result = config.authenticationManager(authenticationConfiguration);
+        AuthenticationManager result = config.authenticationManager(authenticationProvider);
 
-        assertThat(result).isSameAs(authenticationManager);
+        assertThat(result.authenticate(request)).isSameAs(expected);
+        verify(authenticationProvider).authenticate(request);
     }
 
     @Test
@@ -77,13 +81,15 @@ class SecurityConfigTest {
         );
 
         HttpSecurity http = mock(HttpSecurity.class, RETURNS_SELF);
+        AuthenticationProvider authenticationProvider = mock(AuthenticationProvider.class);
         DefaultSecurityFilterChain expectedChain = mock(DefaultSecurityFilterChain.class);
         when(http.build()).thenReturn(expectedChain);
 
-        SecurityFilterChain chain = config.filterChain(http);
+        SecurityFilterChain chain = config.filterChain(http, authenticationProvider);
 
         assertThat(chain).isSameAs(expectedChain);
         verify(http).exceptionHandling(any());
+        verify(http).authenticationProvider(authenticationProvider);
         verify(http).addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         verify(http).addFilterAfter(performanceFilter, JwtAuthenticationFilter.class);
     }
