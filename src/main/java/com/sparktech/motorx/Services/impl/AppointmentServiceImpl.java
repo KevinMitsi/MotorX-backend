@@ -16,6 +16,7 @@ import com.sparktech.motorx.repository.JpaEmployeeRepository;
 import com.sparktech.motorx.repository.JpaVehicleRepository;
 import com.sparktech.motorx.Services.IAppointmentService;
 import com.sparktech.motorx.Services.IEmailNotificationService;
+import com.sparktech.motorx.Services.IMetricsService;
 import com.sparktech.motorx.dto.notification.AppointmentNotificationDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class AppointmentServiceImpl implements IAppointmentService {
     private final JpaVehicleRepository vehicleRepository;
     private final AppointmentMapper appointmentMapper;
     private final IEmailNotificationService notificationService;
+    private final IMetricsService metricsService;
 
     // ---------------------------------------------------------------
     // CONSULTA DE DISPONIBILIDAD
@@ -87,6 +89,8 @@ public class AppointmentServiceImpl implements IAppointmentService {
     @Override
     @Transactional
     public AppointmentResponseDTO createAppointment(CreateAppointmentRequestDTO request, Long clientId) {
+        metricsService.recordAppointmentCreationAttempt();
+        try {
 
         // 1. El tipo REWORK nunca se agenda online
         if (request.appointmentType() == AppointmentType.REWORK) {
@@ -185,7 +189,15 @@ public class AppointmentServiceImpl implements IAppointmentService {
         );
         notificationService.sendAppointmentCreatedNotification(createdDto);
 
+        metricsService.recordAppointmentCreationSuccess();
+
         return appointmentMapper.toResponseDTO(saved);
+        } catch (RuntimeException ex) {
+            if (isBusinessRuleRejection(ex)) {
+                metricsService.recordAppointmentCreationRejected();
+            }
+            throw ex;
+        }
     }
 
     // ---------------------------------------------------------------
@@ -195,6 +207,8 @@ public class AppointmentServiceImpl implements IAppointmentService {
     @Override
     @Transactional
     public AppointmentResponseDTO createUnplannedAppointment(CreateUnplannedAppointmentRequestDTO request) {
+        metricsService.recordAppointmentCreationAttempt();
+        try {
 
         VehicleEntity vehicle = vehicleRepository.findById(request.vehicleId())
                 .orElseThrow(() -> new AppointmentException(
@@ -248,7 +262,14 @@ public class AppointmentServiceImpl implements IAppointmentService {
                 .build();
 
         AppointmentEntity saved = appointmentRepository.save(appointment);
+        metricsService.recordAppointmentCreationSuccess();
         return appointmentMapper.toResponseDTO(saved);
+        } catch (RuntimeException ex) {
+            if (isBusinessRuleRejection(ex)) {
+                metricsService.recordAppointmentCreationRejected();
+            }
+            throw ex;
+        }
     }
 
     // ---------------------------------------------------------------
@@ -544,5 +565,9 @@ public class AppointmentServiceImpl implements IAppointmentService {
     private AppointmentEntity findAppointmentOrThrow(Long id) {
         return appointmentRepository.findById(id)
                 .orElseThrow(() -> new AppointmentNotFoundException(id));
+    }
+
+    private boolean isBusinessRuleRejection(RuntimeException ex) {
+        return ex instanceof AppointmentException || ex instanceof IllegalArgumentException;
     }
 }

@@ -157,4 +157,16 @@ package com.sparktech.motorx.repository;
                 @Param("start") LocalDate start,
                 @Param("end") LocalDate end
         );
+
+        @Query("""
+                SELECT COUNT(a) FROM AppointmentEntity a
+                WHERE a.appointmentDate IS NOT NULL
+                  AND a.startTime IS NOT NULL
+                  AND a.endTime IS NOT NULL
+                  AND a.status IS NOT NULL
+                  AND a.vehicle IS NOT NULL
+                  AND a.currentMileage IS NOT NULL
+                  AND a.endTime > a.startTime
+                """)
+        long countValidRecords();
     }
