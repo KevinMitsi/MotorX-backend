@@ -3,6 +3,7 @@ package com.sparktech.motorx.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.sparktech.motorx.Services.IMetricsService;
 import com.sparktech.motorx.Services.IVehicleService;
 import com.sparktech.motorx.controller.error.GlobalControllerAdvice;
 import com.sparktech.motorx.dto.vehicle.CreateVehicleRequestDTO;
@@ -506,9 +507,6 @@ class VehicleControllerTest {
         }
     }
 
-    // ---------------------------------------------------------------
-    // GET /api/v1/user/vehicles/{vehicleId}
-    // ---------------------------------------------------------------
 
     @Nested
     @DisplayName("GET /api/v1/user/vehicles/{vehicleId}")
@@ -791,6 +789,12 @@ class VehicleControllerTest {
         @Primary
         CustomUserDetailsService customUserDetailsService() {
             return mock(CustomUserDetailsService.class);
+        }
+
+        @Bean
+        @Primary
+        IMetricsService metricsService() {
+            return mock(IMetricsService.class);
         }
     }
 }

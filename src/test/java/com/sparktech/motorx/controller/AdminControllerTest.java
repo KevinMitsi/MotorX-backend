@@ -3,6 +3,7 @@ package com.sparktech.motorx.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sparktech.motorx.Services.IAdminService;
+import com.sparktech.motorx.Services.IMetricsService;
 import com.sparktech.motorx.controller.error.GlobalControllerAdvice;
 import com.sparktech.motorx.dto.appointment.*;
 import com.sparktech.motorx.entity.AppointmentStatus;
@@ -577,6 +578,12 @@ class AdminControllerTest {
         @Primary
         CustomUserDetailsService customUserDetailsService() {
             return mock(CustomUserDetailsService.class);
+        }
+
+        @Bean
+        @Primary
+        IMetricsService metricsService() {
+            return mock(IMetricsService.class);
         }
     }
 }

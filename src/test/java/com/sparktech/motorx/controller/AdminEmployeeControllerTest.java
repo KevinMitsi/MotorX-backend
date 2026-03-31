@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sparktech.motorx.Services.IEmployeeService;
+import com.sparktech.motorx.Services.IMetricsService;
 import com.sparktech.motorx.controller.error.GlobalControllerAdvice;
 import com.sparktech.motorx.dto.auth.RegisterUserDTO;
 import com.sparktech.motorx.dto.employee.CreateEmployeeRequestDTO;
@@ -481,6 +482,12 @@ class AdminEmployeeControllerTest {
         @Primary
         JwtAuthenticationFilter jwtAuthenticationFilter() {
             return mock(JwtAuthenticationFilter.class);
+        }
+
+        @Bean
+        @Primary
+        IMetricsService metricsService() {
+            return mock(IMetricsService.class);
         }
 
         @Bean
