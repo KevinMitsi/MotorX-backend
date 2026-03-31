@@ -35,7 +35,7 @@ public interface JpaServiceRepository extends JpaRepository<@NotNull ServiceEnti
 
     // --- Servicios más agendados (KPI futuro - soporte desde ya) ---
     // Nota: AppointmentEntity usa el enum AppointmentType, no ServiceEntity.
-    //       Este método devuelve los servicios activos ordenados por precio
+    //       Este method devuelve los servicios activos ordenados por precio
     //       como referencia de catálogo. La estadística de citas por tipo
     //       se obtiene desde JpaAppointmentRepository.
     List<ServiceEntity> findByActiveTrueOrderByBasePriceAsc();

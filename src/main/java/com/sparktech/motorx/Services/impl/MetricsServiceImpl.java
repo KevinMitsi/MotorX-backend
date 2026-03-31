@@ -7,6 +7,8 @@ import com.sparktech.motorx.repository.JpaAppointmentRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.repository.Repository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @RequiredArgsConstructor
-public class MetricsServiceImpl implements IMetricsService {
+public class MetricsServiceImpl implements IMetricsService, ApplicationContextAware {
 
     private static final long PERFORMANCE_THRESHOLD_MS = 5000L;
     private static final int DEFAULT_JACOCO_COVERAGE_GATE_PERCENT = 60;
@@ -34,7 +36,8 @@ public class MetricsServiceImpl implements IMetricsService {
 
     private final JpaAppointmentRepository appointmentRepository;
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
-    private final Map<String, Object> applicationBeans;
+
+    private Map<String, Object> applicationBeans = Collections.emptyMap();
 
     private final Map<String, EndpointAccumulator> endpointMetrics = new ConcurrentHashMap<>();
 
@@ -51,6 +54,11 @@ public class MetricsServiceImpl implements IMetricsService {
     private volatile int totalProtectedEndpoints;
     private volatile int endpointsWithAuthEnforced;
     private volatile boolean standardizedErrorHandlingEnabled;
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) {
+        this.applicationBeans = applicationContext.getBeansOfType(Object.class);
+    }
 
     @PostConstruct
     public void initialize() {
@@ -257,4 +265,3 @@ public class MetricsServiceImpl implements IMetricsService {
         private final AtomicLong requestsUnderThreshold = new AtomicLong(0);
     }
 }
-
