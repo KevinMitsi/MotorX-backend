@@ -164,7 +164,7 @@ class MetricsServiceImplTest {
 
     static class DummyController {
         public void dummy() {
-            // Método marcador para construir HandlerMethod en pruebas.
+            // Method marcador para construir HandlerMethod en pruebas.
         }
     }
 }
