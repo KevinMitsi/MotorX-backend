@@ -1,6 +1,7 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IEmailNotificationService;
+import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.Services.IPasswordResetService;
 import com.sparktech.motorx.Services.IVerificationCodeService;
 
@@ -8,6 +9,8 @@ import com.sparktech.motorx.dto.auth.PasswordResetDTO;
 import com.sparktech.motorx.dto.auth.PasswordResetRequestDTO;
 import com.sparktech.motorx.dto.notification.EmailDTO;
 import com.sparktech.motorx.entity.PasswordResetTokenEntity;
+import com.sparktech.motorx.entity.LogActionType;
+import com.sparktech.motorx.entity.LogServiceName;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.exception.InvalidTokenException;
 import com.sparktech.motorx.exception.RecoveryTokenException;
@@ -35,6 +38,7 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final IEmailNotificationService notificationService;
     private final IVerificationCodeService verificationCodeService;
+    private final ILogService logService;
 
     private static final int TOKEN_EXPIRATION_MINUTES = 15;
 
@@ -45,7 +49,16 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
 
         // 1. Buscar usuario
         UserEntity user = userRepository.findByEmail(dto.email())
-                .orElseThrow(() -> new UserNotFoundException("No existe un usuario con el correo: " + dto.email()));
+                .orElseThrow(() -> {
+                    logService.logFailure(
+                            LogServiceName.PASSWORD_RESET,
+                            LogActionType.PASSWORD_RESET_REQUEST,
+                            dto.email(),
+                            null,
+                            "No existe usuario con ese correo"
+                    );
+                    return new UserNotFoundException("No existe un usuario con el correo: " + dto.email());
+                });
 
         // 3. Invalidar tokens anteriores
         invalidatePreviousTokens(user);
@@ -70,6 +83,14 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
         // 7. Enviar email con el código de recuperación
         sendPasswordResetEmail(user, recoveryCode);
 
+        logService.logSuccess(
+                LogServiceName.PASSWORD_RESET,
+                LogActionType.PASSWORD_RESET_REQUEST,
+                user.getEmail(),
+                user.getId(),
+                "Codigo de recuperacion generado"
+        );
+
         log.info("Password reset email sent successfully to: {}", dto.email());
     }
 
@@ -83,10 +104,27 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
 
         // 2. Buscar el token activo en la BD
         PasswordResetTokenEntity tokenEntity = tokenRepository.findByTokenHashAndUsedFalse(hashedProvidedCode)
-                .orElseThrow(() -> new InvalidTokenException("El código de recuperación es inválido o ya fue usado"));
+                .orElseThrow(() -> {
+                    logService.logFailure(
+                            LogServiceName.PASSWORD_RESET,
+                            LogActionType.PASSWORD_RESET_CONFIRM,
+                            null,
+                            null,
+                            "Codigo de recuperacion invalido o usado"
+                    );
+                    return new InvalidTokenException("El código de recuperación es inválido o ya fue usado");
+                });
 
         // 3. Validar expiración
         if (tokenEntity.getExpiresAt().isBefore(LocalDateTime.now())) {
+            UserEntity expiredUser = tokenEntity.getUser();
+            logService.logFailure(
+                    LogServiceName.PASSWORD_RESET,
+                    LogActionType.PASSWORD_RESET_CONFIRM,
+                    expiredUser != null ? expiredUser.getEmail() : null,
+                    expiredUser != null ? expiredUser.getId() : null,
+                    "Codigo de recuperacion expirado"
+            );
             throw new InvalidTokenException("El código de recuperación ha expirado. Solicita uno nuevo.");
         }
 
@@ -106,6 +144,14 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
 
         // 7. Enviar email de confirmación
         sendPasswordChangeConfirmationEmail(user);
+
+        logService.logSuccess(
+                LogServiceName.PASSWORD_RESET,
+                LogActionType.PASSWORD_RESET_CONFIRM,
+                user.getEmail(),
+                user.getId(),
+                "Contrasena restablecida"
+        );
 
         log.info("Password change confirmation email sent successfully to: {}", user.getEmail());
     }

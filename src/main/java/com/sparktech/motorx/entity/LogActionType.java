@@ -1,0 +1,15 @@
+package com.sparktech.motorx.entity;
+
+public enum LogActionType {
+    LOGIN,
+    REGISTER,
+    LOGOUT,
+    VERIFY_2FA,
+    REFRESH_TOKEN,
+    PASSWORD_RESET_REQUEST,
+    PASSWORD_RESET_CONFIRM,
+    UPDATE_USER_PROFILE,
+    SCHEDULE_APPOINTMENT,
+    CANCEL_APPOINTMENT
+}
+

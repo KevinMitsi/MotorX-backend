@@ -5,6 +5,8 @@ import com.sparktech.motorx.dto.auth.AuthResponseDTO;
 import com.sparktech.motorx.dto.auth.LoginRequestDTO;
 import com.sparktech.motorx.dto.auth.RegisterUserDTO;
 import com.sparktech.motorx.dto.user.UserDTO;
+import com.sparktech.motorx.entity.LogActionType;
+import com.sparktech.motorx.entity.LogServiceName;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.exception.BlockedAccountException;
 import com.sparktech.motorx.exception.InvalidPasswordException;
@@ -37,6 +39,7 @@ public class AuthServiceImpl implements IAuthService {
     private final UserEntityMapper userMapper;
     private final IVerificationCodeService verificationCodeService;
     private final IVerificationCodeCacheService cacheService;
+    private final ILogService logService;
 
     @Override
     @Transactional
@@ -49,12 +52,26 @@ public class AuthServiceImpl implements IAuthService {
 
             if (user.isAccountLocked() || !user.isEnabled()){
                 log.warn("Usuario bloqueado o inhabilitado: {}", loginRequest.email());
+                logService.logFailure(
+                        LogServiceName.AUTHENTICATION,
+                        LogActionType.LOGIN,
+                        loginRequest.email(),
+                        user.getId(),
+                        "Cuenta bloqueada o inhabilitada"
+                );
                 throw new BlockedAccountException(user.getEmail());
             }
 
             // Si el usuario es ADMIN, omitir 2FA y devolver token directamente
             if (com.sparktech.motorx.entity.Role.ADMIN.equals(user.getRole())) {
                 log.info("Usuario ADMIN detectado, omitiendo 2FA para: {}", loginRequest.email());
+                logService.logSuccess(
+                        LogServiceName.AUTHENTICATION,
+                        LogActionType.LOGIN,
+                        user.getEmail(),
+                        user.getId(),
+                        "Login exitoso de administrador"
+                );
                 return new AuthResponseDTO(
                         result.token(),
                         user.getId(),
@@ -67,12 +84,26 @@ public class AuthServiceImpl implements IAuthService {
             // Generar y enviar código de verificación 2FA (se almacena automáticamente en caché)
             verificationCodeService.generateAndSendVerificationCode(user);
             log.info("Código de verificación generado y enviado para: {}", loginRequest.email());
+            logService.logSuccess(
+                    LogServiceName.AUTHENTICATION,
+                    LogActionType.LOGIN,
+                    user.getEmail(),
+                    user.getId(),
+                    "Credenciales validas; 2FA enviado"
+            );
 
             return "Código de verificación enviado al email asociado a la cuenta";
 
 
         } catch (BadCredentialsException e) {
             log.warn("Credenciales inválidas para: {}", loginRequest.email());
+            logService.logFailure(
+                    LogServiceName.AUTHENTICATION,
+                    LogActionType.LOGIN,
+                    loginRequest.email(),
+                    null,
+                    "Credenciales invalidas"
+            );
             throw new InvalidPasswordException("Credenciales inválidas");
         }
     }
@@ -81,22 +112,40 @@ public class AuthServiceImpl implements IAuthService {
     @Transactional
     public AuthResponseDTO register(RegisterUserDTO registerRequest) {
         log.info("Registrando nuevo usuario: {}", registerRequest.email());
-        userService.register(registerRequest);
+        try {
+            userService.register(registerRequest);
 
-        AuthResult result = authenticateAndBuildAuthResult(registerRequest.email(), registerRequest.password());
+            AuthResult result = authenticateAndBuildAuthResult(registerRequest.email(), registerRequest.password());
 
-        String token = result.token;
-        UserEntity user = result.user;
+            String token = result.token;
+            UserEntity user = result.user;
 
-        log.info("Usuario registrado y autenticado: {}", registerRequest.email());
+            log.info("Usuario registrado y autenticado: {}", registerRequest.email());
+            logService.logSuccess(
+                    LogServiceName.AUTHENTICATION,
+                    LogActionType.REGISTER,
+                    user.getEmail(),
+                    user.getId(),
+                    "Registro y autenticacion inicial exitosa"
+            );
 
-        return new AuthResponseDTO(
-                token,
-                user.getId(),
-                user.getEmail(),
-                user.getName(),
-                user.getRole()
-        );
+            return new AuthResponseDTO(
+                    token,
+                    user.getId(),
+                    user.getEmail(),
+                    user.getName(),
+                    user.getRole()
+            );
+        } catch (RuntimeException ex) {
+            logService.logFailure(
+                    LogServiceName.AUTHENTICATION,
+                    LogActionType.REGISTER,
+                    registerRequest.email(),
+                    null,
+                    ex.getMessage()
+            );
+            throw ex;
+        }
     }
 
     @Override
@@ -107,7 +156,18 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     public void logout() {
+        String actorEmail = null;
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            actorEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        }
         SecurityContextHolder.clearContext();
+        logService.logSuccess(
+                LogServiceName.AUTHENTICATION,
+                LogActionType.LOGOUT,
+                actorEmail,
+                null,
+                "Sesion finalizada"
+        );
         log.info("Usuario deslogueado exitosamente");
     }
 
@@ -130,6 +190,13 @@ public class AuthServiceImpl implements IAuthService {
             UserEntity user = userDetailsService.getUserEntityByEmail(email);
 
             log.info("Token renovado exitosamente para: {}", email);
+            logService.logSuccess(
+                    LogServiceName.AUTHENTICATION,
+                    LogActionType.REFRESH_TOKEN,
+                    email,
+                    user.getId(),
+                    "Token renovado"
+            );
 
             return new AuthResponseDTO(
                     newToken,
@@ -140,6 +207,13 @@ public class AuthServiceImpl implements IAuthService {
             );
         } catch (Exception e) {
             log.error("Error renovando token: {}", e.getMessage());
+            logService.logFailure(
+                    LogServiceName.AUTHENTICATION,
+                    LogActionType.REFRESH_TOKEN,
+                    null,
+                    null,
+                    e.getMessage()
+            );
             throw new InvalidPasswordException("Token de renovación inválido");
         }
     }
@@ -153,6 +227,13 @@ public class AuthServiceImpl implements IAuthService {
 
         if (!isValid) {
             log.warn("Código 2FA inválido o expirado para: {}", email);
+            logService.logFailure(
+                    LogServiceName.AUTHENTICATION,
+                    LogActionType.VERIFY_2FA,
+                    email,
+                    null,
+                    "Codigo 2FA invalido o expirado"
+            );
             throw new InvalidPasswordException("Código de verificación inválido o expirado");
         }
 
@@ -162,6 +243,13 @@ public class AuthServiceImpl implements IAuthService {
         String token = jwtService.generateToken(userDetails);
 
         log.info("Código 2FA verificado exitosamente para: {}", email);
+        logService.logSuccess(
+                LogServiceName.AUTHENTICATION,
+                LogActionType.VERIFY_2FA,
+                email,
+                user.getId(),
+                "2FA verificado y token emitido"
+        );
 
         return new AuthResponseDTO(
                 token,

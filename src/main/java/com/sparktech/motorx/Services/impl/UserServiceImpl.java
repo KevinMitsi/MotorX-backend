@@ -2,12 +2,15 @@ package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IAppointmentService;
 import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.Services.IUserService;
 import com.sparktech.motorx.dto.appointment.*;
 import com.sparktech.motorx.dto.auth.RegisterUserDTO;
 import com.sparktech.motorx.dto.user.UpdateUserRequestDTO;
 import com.sparktech.motorx.entity.AppointmentStatus;
 import com.sparktech.motorx.entity.AppointmentType;
+import com.sparktech.motorx.entity.LogActionType;
+import com.sparktech.motorx.entity.LogServiceName;
 import com.sparktech.motorx.entity.Role;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.entity.VehicleEntity;
@@ -38,6 +41,7 @@ public class UserServiceImpl implements IUserService {
     private final AppointmentMapper appointmentMapper;
     private final PasswordEncoder passwordEncoder;
     private final ICurrentUserService currentUserService;
+    private final ILogService logService;
 
     // ---------------------------------------------------------------
     // REGISTRO Y PERFIL
@@ -47,9 +51,23 @@ public class UserServiceImpl implements IUserService {
     @Transactional
     public void register(RegisterUserDTO request) {
         if (jpaUserRepository.existsByEmail(request.email())) {
+            logService.logFailure(
+                    LogServiceName.USER,
+                    LogActionType.REGISTER,
+                    request.email(),
+                    null,
+                    "Email ya registrado"
+            );
             throw new IllegalArgumentException("El email ya está registrado");
         }
         if (jpaUserRepository.existsByDni(request.dni())) {
+            logService.logFailure(
+                    LogServiceName.USER,
+                    LogActionType.REGISTER,
+                    request.email(),
+                    null,
+                    "DNI ya registrado"
+            );
             throw new IllegalArgumentException("El DNI ya está registrado");
         }
 
@@ -64,6 +82,13 @@ public class UserServiceImpl implements IUserService {
         user.setAccountLocked(false);
 
         jpaUserRepository.save(user);
+        logService.logSuccess(
+                LogServiceName.USER,
+                LogActionType.REGISTER,
+                user.getEmail(),
+                user.getId(),
+                "Registro de usuario CLIENT completado"
+        );
     }
 
     @Override
@@ -76,6 +101,13 @@ public class UserServiceImpl implements IUserService {
         user.setPhone(userUpdate.phone());
 
         jpaUserRepository.save(user);
+        logService.logSuccess(
+                LogServiceName.USER,
+                LogActionType.UPDATE_USER_PROFILE,
+                user.getEmail(),
+                user.getId(),
+                "Perfil de usuario actualizado"
+        );
     }
 
     // ---------------------------------------------------------------
@@ -123,7 +155,15 @@ public class UserServiceImpl implements IUserService {
     @Transactional
     public AppointmentResponseDTO scheduleAppointment(CreateAppointmentRequestDTO request) {
         UserEntity currentUser = currentUserService.getAuthenticatedUser();
-        return appointmentService.createAppointment(request, currentUser.getId());
+        AppointmentResponseDTO response = appointmentService.createAppointment(request, currentUser.getId());
+        logService.logSuccess(
+                LogServiceName.USER,
+                LogActionType.SCHEDULE_APPOINTMENT,
+                currentUser.getEmail(),
+                currentUser.getId(),
+                "Cita agendada por cliente"
+        );
+        return response;
     }
 
     @Override
@@ -150,7 +190,15 @@ public class UserServiceImpl implements IUserService {
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointment.setCancellationReason("Cancelada por el cliente.");
-        return appointmentMapper.toResponseDTO(appointmentRepository.save(appointment));
+        AppointmentResponseDTO response = appointmentMapper.toResponseDTO(appointmentRepository.save(appointment));
+        logService.logSuccess(
+                LogServiceName.USER,
+                LogActionType.CANCEL_APPOINTMENT,
+                currentUser.getEmail(),
+                currentUser.getId(),
+                "Cita cancelada por cliente"
+        );
+        return response;
     }
 
     @Override
