@@ -16,6 +16,7 @@ import com.sparktech.motorx.repository.JpaAppointmentRepository;
 import com.sparktech.motorx.repository.JpaEmployeeRepository;
 import com.sparktech.motorx.repository.JpaVehicleRepository;
 import com.sparktech.motorx.Services.IEmailNotificationService;
+import com.sparktech.motorx.Services.IMetricsService;
 
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.DisplayName;
@@ -51,6 +52,7 @@ class AppointmentServiceImplTest {
     @Mock private JpaVehicleRepository vehicleRepository;
     @Mock private AppointmentMapper appointmentMapper;
     @Mock private IEmailNotificationService notificationService;
+    @Mock private IMetricsService metricsService;
 
     @InjectMocks
     private AppointmentServiceImpl sut; // System Under Test
@@ -1738,6 +1740,134 @@ class AppointmentServiceImplTest {
             sut.getAppointmentsByDateRange(START, END);
 
             verify(appointmentRepository).findByDateRange(START, END);
+        }
+    }
+
+    @Nested
+    @DisplayName("metrics instrumentation in creation flows")
+    class MetricsInstrumentationTests {
+
+        @Test
+        @DisplayName("createAppointment registra intento y rechazo cuando la regla REWORK bloquea")
+        void createAppointmentShouldRecordRejectedForBusinessRule() {
+            CreateAppointmentRequestDTO request = new CreateAppointmentRequestDTO(
+                    1L,
+                    AppointmentType.REWORK,
+                    LocalDate.of(2099, 1, 7),
+                    LocalTime.of(8, 0),
+                    1234,
+                    Set.of("nota")
+            );
+
+            assertThatThrownBy(() -> sut.createAppointment(request, 99L))
+                    .isInstanceOf(ReworkNotBookableOnlineException.class);
+
+            verify(metricsService).recordAppointmentCreationAttempt();
+            verify(metricsService).recordAppointmentCreationRejected();
+            verify(metricsService, never()).recordAppointmentCreationSuccess();
+        }
+
+        @Test
+        @DisplayName("createAppointment registra intento pero no rechazo si falla con RuntimeException no de negocio")
+        void createAppointmentShouldNotRecordRejectedForUnexpectedRuntime() {
+            CreateAppointmentRequestDTO request = new CreateAppointmentRequestDTO(
+                    1L,
+                    AppointmentType.QUICK_SERVICE,
+                    LocalDate.of(2099, 1, 7),
+                    LocalTime.of(8, 0),
+                    1234,
+                    Set.of("nota")
+            );
+            when(vehicleRepository.findById(1L)).thenThrow(new RuntimeException("db down"));
+
+            assertThatThrownBy(() -> sut.createAppointment(request, 99L))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("db down");
+
+            verify(metricsService).recordAppointmentCreationAttempt();
+            verify(metricsService, never()).recordAppointmentCreationRejected();
+            verify(metricsService, never()).recordAppointmentCreationSuccess();
+        }
+
+        @Test
+        @DisplayName("createUnplannedAppointment registra intento y éxito")
+        void createUnplannedAppointmentShouldRecordSuccess() {
+            UserEntity owner = new UserEntity();
+            owner.setId(1L);
+            owner.setEmail("owner@test.com");
+            owner.setName("Owner");
+
+            VehicleEntity vehicle = new VehicleEntity();
+            vehicle.setId(10L);
+            vehicle.setOwner(owner);
+            vehicle.setBrand("HONDA");
+            vehicle.setModel("CB 190");
+            vehicle.setLicensePlate("ABC12X");
+
+            UserEntity techUser = new UserEntity();
+            techUser.setName("Tech");
+            EmployeeEntity tech = new EmployeeEntity();
+            tech.setId(2L);
+            tech.setUser(techUser);
+            tech.setPosition(EmployeePosition.MECANICO);
+
+            CreateUnplannedAppointmentRequestDTO request = new CreateUnplannedAppointmentRequestDTO(
+                    10L,
+                    AppointmentType.UNPLANNED,
+                    LocalDate.of(2099, 1, 7),
+                    LocalTime.of(8, 0),
+                    4500,
+                    null,
+                    "nota"
+            );
+
+            AppointmentEntity saved = new AppointmentEntity();
+            saved.setId(77L);
+            saved.setVehicle(vehicle);
+            saved.setTechnician(tech);
+            saved.setAppointmentType(AppointmentType.UNPLANNED);
+            saved.setAppointmentDate(LocalDate.of(2099, 1, 7));
+            saved.setStartTime(LocalTime.of(8, 0));
+            saved.setEndTime(LocalTime.of(12, 15));
+            saved.setStatus(AppointmentStatus.SCHEDULED);
+
+            AppointmentResponseDTO responseDTO = mock(AppointmentResponseDTO.class);
+
+            when(vehicleRepository.findById(10L)).thenReturn(Optional.of(vehicle));
+            when(technicianRepository.findAllActive()).thenReturn(List.of(tech));
+            when(appointmentRepository.existsTechnicianConflict(anyLong(), any(), any(), any())).thenReturn(false);
+            when(appointmentRepository.save(any())).thenReturn(saved);
+            when(appointmentMapper.toResponseDTO(saved)).thenReturn(responseDTO);
+
+            AppointmentResponseDTO result = sut.createUnplannedAppointment(request);
+
+            assertThat(result).isSameAs(responseDTO);
+            verify(metricsService).recordAppointmentCreationAttempt();
+            verify(metricsService).recordAppointmentCreationSuccess();
+            verify(metricsService, never()).recordAppointmentCreationRejected();
+        }
+
+        @Test
+        @DisplayName("createUnplannedAppointment registra intento pero no rechazo si falla con RuntimeException no de negocio")
+        void createUnplannedAppointmentShouldNotRecordRejectedForUnexpectedRuntime() {
+            CreateUnplannedAppointmentRequestDTO request = new CreateUnplannedAppointmentRequestDTO(
+                    10L,
+                    AppointmentType.UNPLANNED,
+                    LocalDate.of(2099, 1, 7),
+                    LocalTime.of(8, 0),
+                    4500,
+                    null,
+                    "nota"
+            );
+            when(vehicleRepository.findById(10L)).thenThrow(new RuntimeException("infra"));
+
+            assertThatThrownBy(() -> sut.createUnplannedAppointment(request))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("infra");
+
+            verify(metricsService).recordAppointmentCreationAttempt();
+            verify(metricsService, never()).recordAppointmentCreationRejected();
+            verify(metricsService, never()).recordAppointmentCreationSuccess();
         }
     }
 }

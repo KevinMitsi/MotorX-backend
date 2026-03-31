@@ -2,6 +2,7 @@ package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IAppointmentService;
 import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.dto.appointment.*;
 import com.sparktech.motorx.dto.auth.RegisterUserDTO;
 import com.sparktech.motorx.dto.user.UpdateUserRequestDTO;
@@ -45,6 +46,7 @@ class UserServiceImplTest {
     @Mock private AppointmentMapper appointmentMapper;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private ICurrentUserService currentUserService;
+    @Mock private ILogService logService;
 
     @InjectMocks
     private UserServiceImpl sut;

@@ -2,6 +2,9 @@ package com.sparktech.motorx.config;
 
 import com.sparktech.motorx.security.CustomUserDetailsService;
 import com.sparktech.motorx.security.JwtAuthenticationFilter;
+import com.sparktech.motorx.metrics.MetricsAccessDeniedHandler;
+import com.sparktech.motorx.metrics.MetricsAuthenticationEntryPoint;
+import com.sparktech.motorx.metrics.PerformanceMetricsFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,6 +39,9 @@ public class SecurityConfig {
     public static final String HOST_ROLE = "HOST";
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final PerformanceMetricsFilter performanceMetricsFilter;
+    private final MetricsAuthenticationEntryPoint metricsAuthenticationEntryPoint;
+    private final MetricsAccessDeniedHandler metricsAccessDeniedHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -105,7 +111,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(metricsAuthenticationEntryPoint)
+                        .accessDeniedHandler(metricsAccessDeniedHandler)
+                )
                 .authenticationProvider(authenticationProvider())
+                .addFilterBefore(performanceMetricsFilter, JwtAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

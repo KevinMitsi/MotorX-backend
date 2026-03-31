@@ -1,6 +1,7 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IEmailNotificationService;
+import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.Services.IVerificationCodeService;
 import com.sparktech.motorx.dto.auth.PasswordResetDTO;
 import com.sparktech.motorx.dto.auth.PasswordResetRequestDTO;
@@ -43,6 +44,7 @@ class PasswordResetServiceImplTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private IEmailNotificationService notificationService;
     @Mock private IVerificationCodeService verificationCodeService;
+    @Mock private ILogService logService;
 
     @InjectMocks
     private PasswordResetServiceImpl sut;

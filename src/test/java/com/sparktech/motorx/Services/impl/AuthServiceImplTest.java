@@ -1,6 +1,7 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.Services.IUserService;
 import com.sparktech.motorx.Services.IVerificationCodeCacheService;
 import com.sparktech.motorx.Services.IVerificationCodeService;
@@ -48,6 +49,7 @@ class AuthServiceImplTest {
     @Mock private UserEntityMapper userMapper;
     @Mock private IVerificationCodeService verificationCodeService;
     @Mock private IVerificationCodeCacheService cacheService;
+    @Mock private ILogService logService;
 
     @InjectMocks
     private AuthServiceImpl sut;
