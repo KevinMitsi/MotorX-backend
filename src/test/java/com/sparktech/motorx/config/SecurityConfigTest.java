@@ -84,8 +84,8 @@ class SecurityConfigTest {
 
         assertThat(chain).isSameAs(expectedChain);
         verify(http).exceptionHandling(any());
-        verify(http).addFilterBefore(performanceFilter, JwtAuthenticationFilter.class);
         verify(http).addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        verify(http).addFilterAfter(performanceFilter, JwtAuthenticationFilter.class);
     }
 }
 

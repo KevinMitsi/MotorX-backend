@@ -116,8 +116,8 @@ public class SecurityConfig {
                         .accessDeniedHandler(metricsAccessDeniedHandler)
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(performanceMetricsFilter, JwtAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(performanceMetricsFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

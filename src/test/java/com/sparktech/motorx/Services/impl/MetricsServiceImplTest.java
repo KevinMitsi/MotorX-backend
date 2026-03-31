@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationContext;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -32,16 +33,22 @@ class MetricsServiceImplTest {
     @Mock
     private RequestMappingHandlerMapping requestMappingHandlerMapping;
 
+    @Mock
+    private ApplicationContext applicationContext;
+
     private MetricsServiceImpl sut;
 
     @BeforeEach
     void setUp() throws Exception {
+        sut = new MetricsServiceImpl(appointmentRepository, requestMappingHandlerMapping);
+
         Map<String, Object> beans = new HashMap<>();
         beans.put("adminMetricsController", new AdminMetricsController(mock(IMetricsService.class)));
         beans.put("appointmentRepository", appointmentRepository);
-
-        sut = new MetricsServiceImpl(appointmentRepository, requestMappingHandlerMapping, beans);
         beans.put("metricsService", sut);
+
+        when(applicationContext.getBeansOfType(Object.class)).thenReturn(beans);
+        sut.setApplicationContext(applicationContext);
 
         Method method = DummyController.class.getDeclaredMethod("dummy");
         HandlerMethod handlerMethod = new HandlerMethod(new DummyController(), method);
@@ -168,4 +175,3 @@ class MetricsServiceImplTest {
         }
     }
 }
-
