@@ -1,7 +1,6 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.ILogService;
-import com.sparktech.motorx.dto.log.LogFilterRequestDTO;
 import com.sparktech.motorx.entity.LogActionType;
 import com.sparktech.motorx.entity.LogEntity;
 import com.sparktech.motorx.entity.LogResult;
@@ -25,18 +24,8 @@ public class LogServiceImpl implements ILogService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<@NotNull LogEntity> findLogs(LogFilterRequestDTO filter, Pageable pageable) {
-        String actorEmail = normalizeFilterEmail(filter.actorEmail());
-        return logRepository.findAllByFilters(
-                filter.serviceName(),
-                filter.actionType(),
-                filter.result(),
-                actorEmail,
-                filter.actorUserId(),
-                filter.from(),
-                filter.to(),
-                pageable
-        );
+    public Page<@NotNull LogEntity> findAll(Pageable pageable) {
+        return logRepository.findAll(pageable);
     }
 
     @Override
@@ -87,13 +76,6 @@ public class LogServiceImpl implements ILogService {
             return message;
         }
         return message.substring(0, 500);
-    }
-
-    private String normalizeFilterEmail(String actorEmail) {
-        if (actorEmail == null || actorEmail.isBlank()) {
-            return null;
-        }
-        return actorEmail.trim();
     }
 }
 

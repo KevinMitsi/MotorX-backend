@@ -250,7 +250,7 @@ En `JpaAppointmentRepository` se agrego:
 
 ## 7) Actualizacion posterior: consulta administrativa de logs
 
-Se agrego `LogController` para exponer los logs de auditoria con filtros y paginacion sobre la infraestructura ya existente (`LogEntity`, `ILogService`, `LogServiceImpl`, `JpaLogRepository`).
+Se agrego `LogController` para exponer los logs de auditoria con paginacion sobre la infraestructura ya existente (`LogEntity`, `ILogService`, `LogServiceImpl`, `JpaLogRepository`).
 
 ### Base path
 
@@ -266,17 +266,10 @@ Se agrego `LogController` para exponer los logs de auditoria con filtros y pagin
 
 | Metodo | Endpoint | Descripcion | Respuesta |
 |---|---|---|---|
-| `GET` | `/api/v1/admin/logs` | Consulta paginada de logs con filtros opcionales por modulo, accion, resultado, actor y fechas | `LogPageResponseDTO` |
+| `GET` | `/api/v1/admin/logs` | Consulta paginada de logs de auditoria | `LogPageResponseDTO` |
 
 ### Query params soportados
 
-- `serviceName` (`AUTHENTICATION`, `USER`, `PASSWORD_RESET`, `APPOINTMENT`, `VEHICLE`, `ADMIN`)
-- `actionType` (`LOGIN`, `REGISTER`, `LOGOUT`, `VERIFY_2FA`, `REFRESH_TOKEN`, `PASSWORD_RESET_REQUEST`, `PASSWORD_RESET_CONFIRM`, `UPDATE_USER_PROFILE`, `SCHEDULE_APPOINTMENT`, `CANCEL_APPOINTMENT`)
-- `result` (`SUCCESS`, `FAILURE`)
-- `actorEmail` (coincidencia parcial)
-- `actorUserId`
-- `from` (ISO-8601 `LocalDateTime`)
-- `to` (ISO-8601 `LocalDateTime`)
 - Paginacion Spring: `page`, `size`, `sort`
 
 Valores por defecto de paginacion:
@@ -312,7 +305,6 @@ Valores por defecto de paginacion:
 
 ### Respuestas de error documentadas
 
-- `400` parametros invalidos (por ejemplo enums no validos)
 - `401` no autenticado
 - `403` sin permisos ADMIN
 - `500` error interno del servidor
