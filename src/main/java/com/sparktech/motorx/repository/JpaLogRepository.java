@@ -24,7 +24,7 @@ public interface JpaLogRepository extends JpaRepository<@NotNull LogEntity, @Not
             WHERE (:serviceName IS NULL OR l.serviceName = :serviceName)
               AND (:actionType IS NULL OR l.actionType = :actionType)
               AND (:result IS NULL OR l.result = :result)
-              AND (:actorEmail IS NULL OR LOWER(CAST(l.actorEmail AS string)) LIKE LOWER(CONCAT('%', :actorEmail, '%')))
+              AND (:actorEmail IS NULL OR LOWER(CAST(l.actorEmail AS string)) LIKE CONCAT('%', :actorEmail, '%'))
               AND (:actorUserId IS NULL OR l.actorUserId = :actorUserId)
               AND (:fromDate IS NULL OR l.createdAt >= :fromDate)
               AND (:toDate IS NULL OR l.createdAt <= :toDate)
