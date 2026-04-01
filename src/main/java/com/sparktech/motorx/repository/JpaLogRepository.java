@@ -24,18 +24,18 @@ public interface JpaLogRepository extends JpaRepository<@NotNull LogEntity, @Not
             WHERE (:serviceName IS NULL OR l.serviceName = :serviceName)
               AND (:actionType IS NULL OR l.actionType = :actionType)
               AND (:result IS NULL OR l.result = :result)
-              AND (:actorEmail IS NULL OR LOWER(l.actorEmail) LIKE LOWER(CONCAT('%', :actorEmail, '%')))
+              AND (:actorEmail IS NULL OR LOWER(CAST(l.actorEmail AS string)) LIKE LOWER(CONCAT('%', :actorEmail, '%')))
               AND (:actorUserId IS NULL OR l.actorUserId = :actorUserId)
               AND (:fromDate IS NULL OR l.createdAt >= :fromDate)
               AND (:toDate IS NULL OR l.createdAt <= :toDate)
             """)
-    Page<LogEntity> findAllByFilters(@Param("serviceName") LogServiceName serviceName,
-                                     @Param("actionType") LogActionType actionType,
-                                     @Param("result") LogResult result,
-                                     @Param("actorEmail") String actorEmail,
-                                     @Param("actorUserId") Long actorUserId,
-                                     @Param("fromDate") LocalDateTime fromDate,
-                                     @Param("toDate") LocalDateTime toDate,
-                                     Pageable pageable);
+    Page<@NotNull LogEntity> findAllByFilters(@Param("serviceName") LogServiceName serviceName,
+                                              @Param("actionType") LogActionType actionType,
+                                              @Param("result") LogResult result,
+                                              @Param("actorEmail") String actorEmail,
+                                              @Param("actorUserId") Long actorUserId,
+                                              @Param("fromDate") LocalDateTime fromDate,
+                                              @Param("toDate") LocalDateTime toDate,
+                                              Pageable pageable);
 }
 
