@@ -93,7 +93,7 @@ public class LogServiceImpl implements ILogService {
         if (actorEmail == null || actorEmail.isBlank()) {
             return null;
         }
-        return actorEmail.trim();
+        return actorEmail.trim().toLowerCase();
     }
 }
 
