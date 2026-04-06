@@ -12,6 +12,7 @@ package com.sparktech.motorx.repository;
     import java.time.LocalDate;
     import java.time.LocalTime;
     import java.util.List;
+    import java.util.Optional;
 
     @Repository
     public interface JpaAppointmentRepository extends JpaRepository<@NotNull AppointmentEntity, @NotNull Long> {
@@ -157,6 +158,10 @@ package com.sparktech.motorx.repository;
                 @Param("start") LocalDate start,
                 @Param("end") LocalDate end
         );
+
+        Optional<AppointmentEntity> findFirstByVehicleLicensePlateOrderByAppointmentDateDescStartTimeDesc(String licensePlate);
+
+        Optional<AppointmentEntity> findByIdAndStatus(Long id, AppointmentStatus status);
 
         @Query("""
                 SELECT COUNT(a) FROM AppointmentEntity a

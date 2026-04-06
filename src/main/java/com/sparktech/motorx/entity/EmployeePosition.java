@@ -2,6 +2,7 @@ package com.sparktech.motorx.entity;
 
 public enum EmployeePosition {
     RECEPCIONISTA,
-    MECANICO
+    MECANICO,
+    WAREHOUSE_WORKER
 }
 

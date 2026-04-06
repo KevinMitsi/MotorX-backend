@@ -74,6 +74,12 @@ public class AppointmentEntity {
     @Column(name = "process_started_at")
     private LocalDateTime processStartedAt;
 
+    @Column(name = "verification_code", length = 4)
+    private String verificationCode;
+
+    @Column(name = "verification_code_created_at")
+    private LocalDateTime verificationCodeCreatedAt;
+
     @PrePersist
     private void prePersist() {
         validateTimes();
