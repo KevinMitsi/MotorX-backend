@@ -3,7 +3,6 @@ package com.sparktech.motorx.controller;
 import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.Services.IMetricsService;
 import com.sparktech.motorx.controller.error.GlobalControllerAdvice;
-import com.sparktech.motorx.dto.log.LogFilterRequestDTO;
 import com.sparktech.motorx.entity.LogActionType;
 import com.sparktech.motorx.entity.LogEntity;
 import com.sparktech.motorx.entity.LogResult;
@@ -37,7 +36,6 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,7 +62,7 @@ class LogControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    @DisplayName("GET /api/v1/admin/logs retorna pagina filtrada")
+    @DisplayName("GET /api/v1/admin/logs retorna pagina de logs")
     void shouldReturnPagedLogs() throws Exception {
         LogEntity entity = new LogEntity();
         entity.setId(7L);
@@ -82,16 +80,9 @@ class LogControllerTest {
                 1
         );
 
-        when(logService.findLogs(any(LogFilterRequestDTO.class), any())).thenReturn(mockPage);
+        when(logService.findAll(any())).thenReturn(mockPage);
 
         mockMvc.perform(get("/api/v1/admin/logs")
-                        .param("serviceName", "AUTHENTICATION")
-                        .param("actionType", "LOGIN")
-                        .param("result", "SUCCESS")
-                        .param("actorEmail", "admin@motorx.com")
-                        .param("actorUserId", "5")
-                        .param("from", "2026-03-01T00:00:00")
-                        .param("to", "2026-03-31T23:59:59")
                         .param("page", "0")
                         .param("size", "1")
                         .param("sort", "createdAt,desc"))
@@ -112,7 +103,7 @@ class LogControllerTest {
                 .andExpect(jsonPath("$.last", is(true)))
                 .andExpect(jsonPath("$.empty", is(false)));
 
-        verify(logService).findLogs(any(LogFilterRequestDTO.class), any());
+        verify(logService).findAll(any());
     }
 
     @Test
@@ -120,7 +111,7 @@ class LogControllerTest {
     @DisplayName("GET /api/v1/admin/logs retorna pagina vacia")
     void shouldReturnEmptyPage() throws Exception {
         Page<@NotNull LogEntity> mockPage = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
-        when(logService.findLogs(any(LogFilterRequestDTO.class), any())).thenReturn(mockPage);
+        when(logService.findAll(any())).thenReturn(mockPage);
 
         mockMvc.perform(get("/api/v1/admin/logs"))
                 .andExpect(status().isOk())
@@ -128,18 +119,7 @@ class LogControllerTest {
                 .andExpect(jsonPath("$.empty", is(true)))
                 .andExpect(jsonPath("$.totalElements", is(0)));
 
-        verify(logService).findLogs(any(LogFilterRequestDTO.class), any());
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    @DisplayName("GET /api/v1/admin/logs retorna 400 cuando enum es invalido")
-    void shouldReturnBadRequestWhenEnumIsInvalid() throws Exception {
-        mockMvc.perform(get("/api/v1/admin/logs")
-                        .param("serviceName", "NOT_VALID"))
-                .andExpect(status().isBadRequest());
-
-        verify(logService, never()).findLogs(any(LogFilterRequestDTO.class), any());
+        verify(logService).findAll(any());
     }
 
     @Test
@@ -154,7 +134,7 @@ class LogControllerTest {
     @WithMockUser(roles = "ADMIN")
     @DisplayName("GET /api/v1/admin/logs retorna 500 si el servicio falla")
     void shouldReturnInternalServerErrorWhenServiceThrows() throws Exception {
-        when(logService.findLogs(any(LogFilterRequestDTO.class), any()))
+        when(logService.findAll(any()))
                 .thenThrow(new RuntimeException("fallo inesperado"));
 
         mockMvc.perform(get("/api/v1/admin/logs"))
@@ -162,7 +142,7 @@ class LogControllerTest {
                 .andExpect(jsonPath("$.code", is(500)))
                 .andExpect(jsonPath("$.message", is("Error interno del servidor")));
 
-        verify(logService).findLogs(any(LogFilterRequestDTO.class), any());
+        verify(logService).findAll(any());
     }
 
     @TestConfiguration

@@ -448,4 +448,67 @@ public class GlobalControllerAdvice {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
+    @ExceptionHandler(SpareNotFoundException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleSpareNotFoundException(SpareNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseErrorDTO(
+                HttpStatus.NOT_FOUND.value(),
+                "Repuesto no encontrado",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
+    @ExceptionHandler(DuplicateSpareCodeException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleDuplicateSpareCodeException(DuplicateSpareCodeException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ResponseErrorDTO(
+                HttpStatus.CONFLICT.value(),
+                "Codigo de repuesto duplicado",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleInsufficientStockException(InsufficientStockException ex) {
+        return ResponseEntity.status(422).body(new ResponseErrorDTO(
+                422,
+                "Stock insuficiente",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
+    @ExceptionHandler(InvalidWarehouseLocationException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleInvalidWarehouseLocationException(InvalidWarehouseLocationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseErrorDTO(
+                HttpStatus.BAD_REQUEST.value(),
+                "Ubicacion de bodega invalida",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
+    @ExceptionHandler(AppointmentNotInProcessException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleAppointmentNotInProcessException(AppointmentNotInProcessException ex) {
+        return ResponseEntity.status(422).body(new ResponseErrorDTO(
+                422,
+                "La cita no esta en proceso",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
+    @ExceptionHandler(InvalidVerificationCodeException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleInvalidVerificationCodeException(InvalidVerificationCodeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseErrorDTO(
+                HttpStatus.BAD_REQUEST.value(),
+                "Codigo de verificacion invalido",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
+    @ExceptionHandler(AppointmentNotEligibleForReceptionException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleAppointmentNotEligibleForReceptionException(AppointmentNotEligibleForReceptionException ex) {
+        return ResponseEntity.status(422).body(new ResponseErrorDTO(
+                422,
+                "La cita no es elegible para recepcion",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
 }
