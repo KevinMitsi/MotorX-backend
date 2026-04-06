@@ -36,7 +36,7 @@ import java.util.List;
 public class SecurityConfig {
 
     public static final String ADMIN_ROLE = "ADMIN";
-    public static final String HOST_ROLE = "HOST";
+    public static final String EMPLOYEE_ROLE = "EMPLOYEE";
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final PerformanceMetricsFilter performanceMetricsFilter;
@@ -102,6 +102,18 @@ public class SecurityConfig {
 
                         //Admin users
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMIN_ROLE)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/spares").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/spares/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/spares/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/spares/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/spares/**").hasRole(ADMIN_ROLE)
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/inventory/purchases").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/purchases/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/inventory/sales").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/sales/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+
+                        .requestMatchers("/api/v1/reception/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
                         .requestMatchers("/api/v1/user/**").authenticated()
 
                         //end-points health
