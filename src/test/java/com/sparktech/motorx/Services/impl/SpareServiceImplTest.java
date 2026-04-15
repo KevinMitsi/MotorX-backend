@@ -2,17 +2,23 @@ package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.ICurrentUserService;
 import com.sparktech.motorx.Services.ILogService;
+import com.sparktech.motorx.Services.INotificationService;
 import com.sparktech.motorx.dto.inventory.CreateSpareDTO;
 import com.sparktech.motorx.dto.inventory.SpareResponseDTO;
 import com.sparktech.motorx.dto.inventory.UpdateSpareDTO;
 import com.sparktech.motorx.dto.inventory.UpdateSparePurchasePriceDTO;
+import com.sparktech.motorx.dto.notification.CreateNotificationDTO;
+import com.sparktech.motorx.entity.EmployeeEntity;
+import com.sparktech.motorx.entity.EmployeePosition;
 import com.sparktech.motorx.entity.LogActionType;
+import com.sparktech.motorx.entity.Role;
 import com.sparktech.motorx.entity.Spare;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.exception.DuplicateSpareCodeException;
 import com.sparktech.motorx.exception.InvalidWarehouseLocationException;
 import com.sparktech.motorx.exception.SpareNotFoundException;
 import com.sparktech.motorx.mapper.SpareMapper;
+import com.sparktech.motorx.repository.JpaEmployeeRepository;
 import com.sparktech.motorx.repository.JpaSpareRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,6 +50,10 @@ class SpareServiceImplTest {
     private ICurrentUserService currentUserService;
     @Mock
     private ILogService logService;
+    @Mock
+    private JpaEmployeeRepository employeeRepository;
+    @Mock
+    private INotificationService notificationService;
 
     @InjectMocks
     private SpareServiceImpl sut;
@@ -59,7 +69,7 @@ class SpareServiceImplTest {
     @Test
     @DisplayName("createSpare guarda y calcula margen 35% para no-aceite")
     void createSpareShouldSaveAndCalculateSalePriceForRegularSpare() {
-        CreateSpareDTO dto = new CreateSpareDTO("Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("100.00"), false, "Prov", 3, "02-01-01-01");
+        CreateSpareDTO dto = new CreateSpareDTO("Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("100.00"), false, "Prov", 3, 2, "02-01-01-01");
         Spare entity = spare(false, new BigDecimal("100.00"), 3);
         entity.setId(1L);
 
@@ -80,7 +90,7 @@ class SpareServiceImplTest {
     @Test
     @DisplayName("createSpare usa margen 25% para aceites")
     void createSpareShouldUseOilMargin() {
-        CreateSpareDTO dto = new CreateSpareDTO("Aceite", "Yamaha", "SAV-2", "REP-2", new BigDecimal("200.00"), true, "Prov", 5, "02-01-01-02");
+        CreateSpareDTO dto = new CreateSpareDTO("Aceite", "Yamaha", "SAV-2", "REP-2", new BigDecimal("200.00"), true, "Prov", 5, 2, "02-01-01-02");
         Spare entity = spare(true, new BigDecimal("200.00"), 5);
         entity.setId(2L);
 
@@ -96,7 +106,7 @@ class SpareServiceImplTest {
     @Test
     @DisplayName("createSpare lanza DuplicateSpareCodeException para SAV duplicado")
     void createSpareShouldFailWhenSavCodeDuplicated() {
-        CreateSpareDTO dto = new CreateSpareDTO("Filtro", "AKT", "SAV-DUP", "REP-1", new BigDecimal("100"), false, "Prov", 1, "02-01-01-01");
+        CreateSpareDTO dto = new CreateSpareDTO("Filtro", "AKT", "SAV-DUP", "REP-1", new BigDecimal("100"), false, "Prov", 1, 2, "02-01-01-01");
         when(spareRepository.existsBySavCode("SAV-DUP")).thenReturn(true);
 
         assertThatThrownBy(() -> sut.createSpare(dto)).isInstanceOf(DuplicateSpareCodeException.class);
@@ -107,7 +117,7 @@ class SpareServiceImplTest {
     @Test
     @DisplayName("createSpare lanza DuplicateSpareCodeException para spareCode duplicado")
     void createSpareShouldFailWhenSpareCodeDuplicated() {
-        CreateSpareDTO dto = new CreateSpareDTO("Filtro", "AKT", "SAV-1", "REP-DUP", new BigDecimal("100"), false, "Prov", 1, "02-01-01-01");
+        CreateSpareDTO dto = new CreateSpareDTO("Filtro", "AKT", "SAV-1", "REP-DUP", new BigDecimal("100"), false, "Prov", 1, 2, "02-01-01-01");
         when(spareRepository.existsBySavCode("SAV-1")).thenReturn(false);
         when(spareRepository.existsBySpareCode("REP-DUP")).thenReturn(true);
 
@@ -117,7 +127,7 @@ class SpareServiceImplTest {
     @Test
     @DisplayName("createSpare lanza InvalidWarehouseLocationException con formato invalido")
     void createSpareShouldFailWhenWarehouseLocationInvalid() {
-        CreateSpareDTO dto = new CreateSpareDTO("Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("100"), false, "Prov", 1, "2-1-1-1");
+        CreateSpareDTO dto = new CreateSpareDTO("Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("100"), false, "Prov", 1, 2, "2-1-1-1");
 
         assertThatThrownBy(() -> sut.createSpare(dto)).isInstanceOf(InvalidWarehouseLocationException.class);
         verifyNoInteractions(spareMapper);
@@ -153,7 +163,7 @@ class SpareServiceImplTest {
     void updateSpareShouldUpdateAndSave() {
         Spare existing = spare(false, new BigDecimal("50"), 3);
         existing.setId(3L);
-        UpdateSpareDTO dto = new UpdateSpareDTO("Bujia", "AKT", "SAV-X", "REP-X", new BigDecimal("90"), false, "Prov", 8, "03-01-01-01");
+        UpdateSpareDTO dto = new UpdateSpareDTO("Bujia", "AKT", "SAV-X", "REP-X", new BigDecimal("90"), false, "Prov", 8, 3, "03-01-01-01");
 
         when(spareRepository.findById(3L)).thenReturn(Optional.of(existing));
         when(spareRepository.save(existing)).thenReturn(existing);
@@ -171,7 +181,7 @@ class SpareServiceImplTest {
     void updateSpareShouldFailWhenSavCodeAlreadyUsedByOtherRecord() {
         Spare existing = spare(false, new BigDecimal("50"), 3);
         existing.setId(3L);
-        UpdateSpareDTO dto = new UpdateSpareDTO("Bujia", "AKT", "SAV-X", "REP-X", new BigDecimal("90"), false, "Prov", 8, "03-01-01-01");
+        UpdateSpareDTO dto = new UpdateSpareDTO("Bujia", "AKT", "SAV-X", "REP-X", new BigDecimal("90"), false, "Prov", 8, 3, "03-01-01-01");
 
         when(spareRepository.findById(3L)).thenReturn(Optional.of(existing));
         when(spareRepository.existsBySavCodeAndIdNot("SAV-X", 3L)).thenReturn(true);
@@ -184,7 +194,7 @@ class SpareServiceImplTest {
     void updateSpareShouldFailWhenSpareCodeAlreadyUsedByOtherRecord() {
         Spare existing = spare(false, new BigDecimal("50"), 3);
         existing.setId(3L);
-        UpdateSpareDTO dto = new UpdateSpareDTO("Bujia", "AKT", "SAV-X", "REP-X", new BigDecimal("90"), false, "Prov", 8, "03-01-01-01");
+        UpdateSpareDTO dto = new UpdateSpareDTO("Bujia", "AKT", "SAV-X", "REP-X", new BigDecimal("90"), false, "Prov", 8, 3, "03-01-01-01");
 
         when(spareRepository.findById(3L)).thenReturn(Optional.of(existing));
         when(spareRepository.existsBySavCodeAndIdNot("SAV-X", 3L)).thenReturn(false);
@@ -235,6 +245,51 @@ class SpareServiceImplTest {
         assertThat(salePriceCaptor.getValue()).isEqualByComparingTo("135.00");
     }
 
+    @Test
+    @DisplayName("getSparesBelowThreshold retorna solo repuestos bajos")
+    void getSparesBelowThresholdShouldReturnMappedValues() {
+        Spare s1 = spare(false, new BigDecimal("100"), 1);
+        s1.setId(11L);
+        when(spareRepository.findLowStockSpares()).thenReturn(List.of(s1));
+        when(spareMapper.toResponseDTO(eq(s1), any())).thenAnswer(inv -> response(inv.getArgument(0), inv.getArgument(1)));
+
+        List<SpareResponseDTO> result = sut.getSparesBelowThreshold();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().id()).isEqualTo(11L);
+    }
+
+    @Test
+    @DisplayName("notifyWarehouseWorkersToRestock notifica a empleados de bodega")
+    void notifyWarehouseWorkersToRestockShouldNotifyWarehouseWorkers() {
+        Spare spare = spare(false, new BigDecimal("50"), 1);
+        spare.setId(70L);
+        spare.setStockThreshold(4);
+        spare.setWarehouseLocation("03-03-03-03");
+        spare.setName("Filtro Premium");
+
+        UserEntity warehouseUser = new UserEntity();
+        warehouseUser.setId(501L);
+        warehouseUser.setRole(Role.EMPLOYEE);
+
+        EmployeeEntity employee = new EmployeeEntity();
+        employee.setId(900L);
+        employee.setPosition(EmployeePosition.WAREHOUSE_WORKER);
+        employee.setUser(warehouseUser);
+
+        when(spareRepository.findById(70L)).thenReturn(Optional.of(spare));
+        when(employeeRepository.findByPosition(EmployeePosition.WAREHOUSE_WORKER)).thenReturn(List.of(employee));
+
+        long notified = sut.notifyWarehouseWorkersToRestock(70L);
+
+        assertThat(notified).isEqualTo(1L);
+        verify(notificationService).createNotification(argThat((CreateNotificationDTO dto) ->
+                dto.userId().equals(501L)
+                        && dto.description().contains("03-03-03-03")
+                        && dto.description().contains("Filtro Premium")
+        ));
+    }
+
     private Spare spare(Boolean isOil, BigDecimal purchasePrice, Integer quantity) {
         Spare spare = new Spare();
         spare.setName("Repuesto");
@@ -245,6 +300,7 @@ class SpareServiceImplTest {
         spare.setIsOil(isOil);
         spare.setSupplier("Proveedor");
         spare.setQuantity(quantity);
+        spare.setStockThreshold(2);
         spare.setWarehouseLocation("01-01-01-01");
         return spare;
     }
@@ -261,6 +317,7 @@ class SpareServiceImplTest {
                 spare.getIsOil(),
                 spare.getSupplier(),
                 spare.getQuantity(),
+                spare.getStockThreshold(),
                 spare.getWarehouseLocation()
         );
     }

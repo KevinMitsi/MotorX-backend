@@ -45,6 +45,11 @@ public record CreateSpareDTO(
         @Min(value = 0, message = "La cantidad no puede ser negativa")
         Integer quantity,
 
+        @Schema(description = "Umbral minimo de stock para alertas", example = "5")
+        @NotNull(message = "El umbral de stock es obligatorio")
+        @Min(value = 0, message = "El umbral de stock no puede ser negativo")
+        Integer stockThreshold,
+
         @Schema(description = "Ubicacion de bodega PA-ES-NI-SL", example = "02-04-01-03")
         @NotBlank(message = "La ubicacion de bodega es obligatoria")
         @Pattern(regexp = "\\d{2}-\\d{2}-\\d{2}-\\d{2}", message = "La ubicacion debe tener formato 00-00-00-00")

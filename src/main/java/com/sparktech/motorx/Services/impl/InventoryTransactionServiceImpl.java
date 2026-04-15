@@ -3,7 +3,9 @@ package com.sparktech.motorx.Services.impl;
 import com.sparktech.motorx.Services.IInventoryTransactionService;
 import com.sparktech.motorx.Services.ICurrentUserService;
 import com.sparktech.motorx.Services.ILogService;
+import com.sparktech.motorx.Services.INotificationService;
 import com.sparktech.motorx.dto.inventory.*;
+import com.sparktech.motorx.dto.notification.CreateNotificationDTO;
 import com.sparktech.motorx.entity.*;
 import com.sparktech.motorx.exception.AppointmentNotInProcessException;
 import com.sparktech.motorx.exception.InsufficientStockException;
@@ -25,14 +27,17 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class InventoryTransactionServiceImpl implements IInventoryTransactionService {
+    private static final String EMPLOYEE_PROFILE_MISSING = "El usuario no tiene perfil de empleado.";
 
     private final JpaPurchaseTransactionRepository purchaseRepository;
     private final JpaSaleTransactionRepository saleRepository;
     private final JpaSpareRepository spareRepository;
     private final JpaAppointmentRepository appointmentRepository;
     private final JpaEmployeeRepository employeeRepository;
+    private final JpaUserRepository userRepository;
     private final ICurrentUserService currentUserService;
     private final ILogService logService;
+    private final INotificationService notificationService;
     private final PurchaseTransactionMapper purchaseMapper;
     private final SaleTransactionMapper saleMapper;
 
@@ -136,6 +141,7 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
                     throw new InsufficientStockException("Stock insuficiente para el repuesto: " + spare.getName());
                 }
                 spare.setQuantity(finalQty);
+                notifyAdminsWhenBelowThreshold(spare);
 
                 BigDecimal margin = Boolean.TRUE.equals(spare.getIsOil()) ? BigDecimal.valueOf(0.25) : BigDecimal.valueOf(0.35);
                 BigDecimal salePrice = spare.getPurchasePriceWithVat().multiply(BigDecimal.ONE.add(margin));
@@ -213,7 +219,7 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
             return;
         }
         EmployeeEntity employee = employeeRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new IllegalStateException("El usuario no tiene perfil de empleado."));
+                .orElseThrow(() -> new IllegalStateException(EMPLOYEE_PROFILE_MISSING));
         if (employee.getPosition() != EmployeePosition.WAREHOUSE_WORKER) {
             throw new IllegalStateException("No tienes permisos para operaciones de bodega.");
         }
@@ -224,7 +230,7 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
             return;
         }
         EmployeeEntity employee = employeeRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new IllegalStateException("El usuario no tiene perfil de empleado."));
+                .orElseThrow(() -> new IllegalStateException(EMPLOYEE_PROFILE_MISSING));
         if (employee.getPosition() != EmployeePosition.RECEPCIONISTA) {
             throw new IllegalStateException("Solo recepcion o admin puede registrar ventas.");
         }
@@ -235,10 +241,32 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
             return;
         }
         EmployeeEntity employee = employeeRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new IllegalStateException("El usuario no tiene perfil de empleado."));
+                .orElseThrow(() -> new IllegalStateException(EMPLOYEE_PROFILE_MISSING));
         if (employee.getPosition() != EmployeePosition.RECEPCIONISTA
                 && employee.getPosition() != EmployeePosition.WAREHOUSE_WORKER) {
             throw new IllegalStateException("No tienes permisos para ver ventas.");
+        }
+    }
+
+    private void notifyAdminsWhenBelowThreshold(Spare spare) {
+        if (spare.getStockThreshold() == null || spare.getStockThreshold() <= 0) {
+            return;
+        }
+        if (spare.getQuantity() >= spare.getStockThreshold()) {
+            return;
+        }
+
+        List<UserEntity> admins = userRepository.findByRole(Role.ADMIN);
+        for (UserEntity admin : admins) {
+            notificationService.createNotification(new CreateNotificationDTO(
+                    admin.getId(),
+                    "Stock crítico de repuesto",
+                    "El repuesto " + spare.getName() + " quedó en stock " + spare.getQuantity() +
+                            ", por debajo del umbral " + spare.getStockThreshold() +
+                            ". Ubicación: " + spare.getWarehouseLocation(),
+                    NotificationUrgency.CRITICAL,
+                    "INVENTORY"
+            ));
         }
     }
 }

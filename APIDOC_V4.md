@@ -191,5 +191,38 @@ Compatibilidad:
 
 ---
 
+## 10) Extension de inventario (stock threshold)
+
+Se agrega el campo `stockThreshold` a repuestos para definir minimo de existencias antes de alerta.
+
+### Cambios principales
+
+1. `Spare` agrega `stockThreshold` (entero >= 0).
+2. DTOs actualizados:
+   - `CreateSpareDTO`
+   - `UpdateSpareDTO`
+   - `SpareResponseDTO`
+3. Nuevo endpoint:
+   - `GET /api/v1/spares/below-threshold` para listar repuestos bajo umbral.
+4. Nueva accion admin:
+   - `POST /api/v1/spares/{id}/notify-restock` para notificar a empleados `WAREHOUSE_WORKER` con mensaje de surtido y codigo de estanteria.
+
+### Notificacion automatica critica
+
+En registro de ventas (`InventoryTransactionServiceImpl`), cuando un repuesto queda con `quantity < stockThreshold`, se envía notificacion `CRITICAL` a usuarios `ADMIN`.
+
+### Migracion
+
+- `V11__add_spare_stock_threshold.sql`
+
+### Endpoints agregados en esta extension
+
+| Metodo | Endpoint | Descripcion | Acceso |
+|---|---|---|---|
+| `GET` | `/api/v1/spares/below-threshold` | Lista repuestos bajo umbral | `ADMIN`, `EMPLOYEE` |
+| `POST` | `/api/v1/spares/{id}/notify-restock` | Notifica surtido a personal de bodega | Solo `ADMIN` |
+
+---
+
 > `APIDOC_V4.md` funciona como addendum incremental y no reemplaza los documentos anteriores.
 

@@ -2,16 +2,22 @@ package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.ICurrentUserService;
 import com.sparktech.motorx.Services.ILogService;
+import com.sparktech.motorx.Services.INotificationService;
 import com.sparktech.motorx.Services.ISpareService;
+import com.sparktech.motorx.dto.notification.CreateNotificationDTO;
 import com.sparktech.motorx.dto.inventory.*;
+import com.sparktech.motorx.entity.EmployeePosition;
 import com.sparktech.motorx.entity.LogActionType;
 import com.sparktech.motorx.entity.LogServiceName;
+import com.sparktech.motorx.entity.NotificationUrgency;
 import com.sparktech.motorx.entity.Spare;
 import com.sparktech.motorx.entity.UserEntity;
+import com.sparktech.motorx.entity.Role;
 import com.sparktech.motorx.exception.DuplicateSpareCodeException;
 import com.sparktech.motorx.exception.InvalidWarehouseLocationException;
 import com.sparktech.motorx.exception.SpareNotFoundException;
 import com.sparktech.motorx.mapper.SpareMapper;
+import com.sparktech.motorx.repository.JpaEmployeeRepository;
 import com.sparktech.motorx.repository.JpaSpareRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,6 +37,8 @@ public class SpareServiceImpl implements ISpareService {
     private final SpareMapper spareMapper;
     private final ICurrentUserService currentUserService;
     private final ILogService logService;
+    private final JpaEmployeeRepository employeeRepository;
+    private final INotificationService notificationService;
 
     @Override
     @Transactional
@@ -67,6 +75,15 @@ public class SpareServiceImpl implements ISpareService {
     @Transactional(readOnly = true)
     public List<SpareResponseDTO> getAllSpares() {
         return spareRepository.findAll().stream().map(this::toResponse).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SpareResponseDTO> getSparesBelowThreshold() {
+        return spareRepository.findLowStockSpares()
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Override
@@ -158,6 +175,30 @@ public class SpareServiceImpl implements ISpareService {
             );
             throw ex;
         }
+    }
+
+    @Override
+    @Transactional
+    public long notifyWarehouseWorkersToRestock(Long spareId) {
+        Spare spare = findSpareOrThrow(spareId);
+
+        List<UserEntity> warehouseUsers = employeeRepository.findByPosition(EmployeePosition.WAREHOUSE_WORKER)
+                .stream()
+                .map(com.sparktech.motorx.entity.EmployeeEntity::getUser)
+                .filter(user -> user != null && user.getRole() == Role.EMPLOYEE)
+                .toList();
+
+        for (UserEntity warehouseUser : warehouseUsers) {
+            notificationService.createNotification(new CreateNotificationDTO(
+                    warehouseUser.getId(),
+                    "Surtir estanteria de repuesto",
+                    "Surtir estanteria " + spare.getWarehouseLocation() + " con el repuesto " + spare.getName() +
+                            " (stock actual " + spare.getQuantity() + ", umbral " + spare.getStockThreshold() + ")",
+                    NotificationUrgency.HIGH,
+                    "SPARE"
+            ));
+        }
+        return warehouseUsers.size();
     }
 
     private Spare findSpareOrThrow(Long id) {

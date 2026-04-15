@@ -55,6 +55,18 @@ public class SpareController {
         return ResponseEntity.ok(spareService.getAllSpares());
     }
 
+    @GetMapping("/below-threshold")
+    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @Operation(summary = "Listar repuestos bajo umbral de stock")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Listado consultado exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
+    public ResponseEntity<@NotNull List<SpareResponseDTO>> getBelowThreshold() {
+        return ResponseEntity.ok(spareService.getSparesBelowThreshold());
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     @Operation(summary = "Consultar repuesto por ID")
@@ -119,6 +131,21 @@ public class SpareController {
     ) {
         spareService.deleteSpare(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/notify-restock")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Notificar surtido a usuarios de bodega")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Notificaciones enviadas"),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Repuesto no encontrado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
+    public ResponseEntity<@NotNull Long> notifyRestock(
+            @Parameter(description = "ID del repuesto") @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(spareService.notifyWarehouseWorkersToRestock(id));
     }
 }
 
