@@ -457,6 +457,15 @@ public class GlobalControllerAdvice {
         ));
     }
 
+    @ExceptionHandler(NotificationNotFoundException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleNotificationNotFoundException(NotificationNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ResponseErrorDTO(
+                HttpStatus.NOT_FOUND.value(),
+                "Notificacion no encontrada",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
     @ExceptionHandler(DuplicateSpareCodeException.class)
     public ResponseEntity<@NotNull ResponseErrorDTO> handleDuplicateSpareCodeException(DuplicateSpareCodeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ResponseErrorDTO(

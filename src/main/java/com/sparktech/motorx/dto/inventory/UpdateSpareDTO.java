@@ -29,6 +29,9 @@ public record UpdateSpareDTO(
         @NotNull(message = "La cantidad es obligatoria")
         @Min(value = 0, message = "La cantidad no puede ser negativa")
         Integer quantity,
+        @NotNull(message = "El umbral de stock es obligatorio")
+        @Min(value = 0, message = "El umbral de stock no puede ser negativo")
+        Integer stockThreshold,
         @NotBlank(message = "La ubicacion de bodega es obligatoria")
         @Pattern(regexp = "\\d{2}-\\d{2}-\\d{2}-\\d{2}", message = "La ubicacion debe tener formato 00-00-00-00")
         String warehouseLocation

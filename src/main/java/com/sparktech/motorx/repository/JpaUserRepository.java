@@ -37,6 +37,8 @@ public interface JpaUserRepository extends JpaRepository<@NotNull UserEntity, @N
     // --- Métrica: Cantidad de usuarios registrados por rol ---
     long countByRole(Role role);
 
+    List<UserEntity> findByRole(Role role);
+
     // --- Métrica: Tiempo promedio de registro ---
     // Usuarios registrados en un rango de fechas (para calcular volumen mensual)
     @Query("SELECT u FROM UserEntity u WHERE u.createdAt BETWEEN :start AND :end")

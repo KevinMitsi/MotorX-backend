@@ -9,6 +9,8 @@ public interface ISpareService {
 
     List<SpareResponseDTO> getAllSpares();
 
+    List<SpareResponseDTO> getSparesBelowThreshold();
+
     SpareResponseDTO getSpareById(Long id);
 
     SpareResponseDTO updateSpare(Long id, UpdateSpareDTO dto);
@@ -16,5 +18,7 @@ public interface ISpareService {
     SpareResponseDTO updatePurchasePrice(Long id, UpdateSparePurchasePriceDTO dto);
 
     void deleteSpare(Long id);
+
+    long notifyWarehouseWorkersToRestock(Long spareId);
 }
 
