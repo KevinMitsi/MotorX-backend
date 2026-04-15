@@ -1,10 +1,14 @@
 package com.sparktech.motorx.Services.impl;
 
+import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.dto.inventory.CreateSpareDTO;
 import com.sparktech.motorx.dto.inventory.SpareResponseDTO;
 import com.sparktech.motorx.dto.inventory.UpdateSpareDTO;
 import com.sparktech.motorx.dto.inventory.UpdateSparePurchasePriceDTO;
+import com.sparktech.motorx.entity.LogActionType;
 import com.sparktech.motorx.entity.Spare;
+import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.exception.DuplicateSpareCodeException;
 import com.sparktech.motorx.exception.InvalidWarehouseLocationException;
 import com.sparktech.motorx.exception.SpareNotFoundException;
@@ -36,9 +40,21 @@ class SpareServiceImplTest {
 
     @Mock
     private SpareMapper spareMapper;
+    @Mock
+    private ICurrentUserService currentUserService;
+    @Mock
+    private ILogService logService;
 
     @InjectMocks
     private SpareServiceImpl sut;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        UserEntity actor = new UserEntity();
+        actor.setId(100L);
+        actor.setEmail("admin@test.com");
+        lenient().when(currentUserService.getAuthenticatedUser()).thenReturn(actor);
+    }
 
     @Test
     @DisplayName("createSpare guarda y calcula margen 35% para no-aceite")
@@ -58,6 +74,7 @@ class SpareServiceImplTest {
 
         assertThat(result.salePrice()).isEqualByComparingTo("135.0000");
         verify(spareRepository).save(entity);
+        verify(logService).logSuccess(any(), eq(LogActionType.CREATE_SPARE), anyString(), anyLong(), contains("Repuesto creado"));
     }
 
     @Test
@@ -84,6 +101,7 @@ class SpareServiceImplTest {
 
         assertThatThrownBy(() -> sut.createSpare(dto)).isInstanceOf(DuplicateSpareCodeException.class);
         verify(spareRepository, never()).save(any());
+        verify(logService).logFailure(any(), eq(LogActionType.CREATE_SPARE), anyString(), anyLong(), contains("SAV"));
     }
 
     @Test
@@ -145,6 +163,7 @@ class SpareServiceImplTest {
 
         verify(spareMapper).updateEntity(existing, dto);
         verify(spareRepository).save(existing);
+        verify(logService).logSuccess(any(), eq(LogActionType.UPDATE_SPARE), anyString(), anyLong(), contains("actualizado"));
     }
 
     @Test
@@ -198,6 +217,7 @@ class SpareServiceImplTest {
         sut.deleteSpare(5L);
 
         verify(spareRepository).delete(existing);
+        verify(logService).logSuccess(any(), eq(LogActionType.DELETE_SPARE), anyString(), anyLong(), contains("eliminado"));
     }
 
     @Test

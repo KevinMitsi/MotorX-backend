@@ -2,6 +2,7 @@ package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IInventoryTransactionService;
 import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.dto.inventory.*;
 import com.sparktech.motorx.entity.*;
 import com.sparktech.motorx.exception.AppointmentNotInProcessException;
@@ -31,6 +32,7 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
     private final JpaAppointmentRepository appointmentRepository;
     private final JpaEmployeeRepository employeeRepository;
     private final ICurrentUserService currentUserService;
+    private final ILogService logService;
     private final PurchaseTransactionMapper purchaseMapper;
     private final SaleTransactionMapper saleMapper;
 
@@ -38,32 +40,51 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
     @Transactional
     public PurchaseTransactionResponseDTO registerPurchase(CreatePurchaseTransactionDTO dto) {
         UserEntity currentUser = currentUserService.getAuthenticatedUser();
-        validateWarehouseOrAdmin(currentUser);
+        try {
+            validateWarehouseOrAdmin(currentUser);
 
-        PurchaseTransaction transaction = PurchaseTransaction.builder()
-                .supplier(dto.supplier())
-                .createdBy(currentUser)
-                .items(new ArrayList<>())
-                .build();
-
-        for (CreatePurchaseItemDTO itemDto : dto.items()) {
-            Spare spare = spareRepository.findById(itemDto.spareId())
-                    .orElseThrow(() -> new SpareNotFoundException(itemDto.spareId()));
-
-            spare.setQuantity(spare.getQuantity() + itemDto.quantity());
-            spare.setPurchasePriceWithVat(itemDto.purchasePriceWithVat());
-
-            PurchaseTransactionItem item = PurchaseTransactionItem.builder()
-                    .purchaseTransaction(transaction)
-                    .spare(spare)
-                    .quantity(itemDto.quantity())
-                    .purchasePriceWithVat(itemDto.purchasePriceWithVat())
+            PurchaseTransaction transaction = PurchaseTransaction.builder()
+                    .supplier(dto.supplier())
+                    .createdBy(currentUser)
+                    .items(new ArrayList<>())
                     .build();
 
-            transaction.getItems().add(item);
-        }
+            for (CreatePurchaseItemDTO itemDto : dto.items()) {
+                Spare spare = spareRepository.findById(itemDto.spareId())
+                        .orElseThrow(() -> new SpareNotFoundException(itemDto.spareId()));
 
-        return purchaseMapper.toResponseDTO(purchaseRepository.save(transaction));
+                spare.setQuantity(spare.getQuantity() + itemDto.quantity());
+                spare.setPurchasePriceWithVat(itemDto.purchasePriceWithVat());
+
+                PurchaseTransactionItem item = PurchaseTransactionItem.builder()
+                        .purchaseTransaction(transaction)
+                        .spare(spare)
+                        .quantity(itemDto.quantity())
+                        .purchasePriceWithVat(itemDto.purchasePriceWithVat())
+                        .build();
+
+                transaction.getItems().add(item);
+            }
+
+            PurchaseTransaction saved = purchaseRepository.save(transaction);
+            logService.logSuccess(
+                    LogServiceName.INVENTORY,
+                    LogActionType.REGISTER_PURCHASE,
+                    currentUser.getEmail(),
+                    currentUser.getId(),
+                    "Compra registrada: " + saved.getId()
+            );
+            return purchaseMapper.toResponseDTO(saved);
+        } catch (RuntimeException ex) {
+            logService.logFailure(
+                    LogServiceName.INVENTORY,
+                    LogActionType.REGISTER_PURCHASE,
+                    currentUser.getEmail(),
+                    currentUser.getId(),
+                    ex.getMessage()
+            );
+            throw ex;
+        }
     }
 
     @Override
@@ -88,46 +109,65 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
     @Transactional
     public SaleTransactionResponseDTO registerSale(CreateSaleTransactionDTO dto) {
         UserEntity currentUser = currentUserService.getAuthenticatedUser();
-        validateReceptionistOrAdmin(currentUser);
+        try {
+            validateReceptionistOrAdmin(currentUser);
 
-        AppointmentEntity appointment = null;
-        if (dto.appointmentId() != null) {
-            appointment = appointmentRepository.findById(dto.appointmentId())
-                    .orElseThrow(() -> new IllegalArgumentException("No se encontro la cita con ID: " + dto.appointmentId()));
-            if (appointment.getStatus() != AppointmentStatus.IN_PROGRESS) {
-                throw new AppointmentNotInProcessException(dto.appointmentId());
+            AppointmentEntity appointment = null;
+            if (dto.appointmentId() != null) {
+                appointment = appointmentRepository.findById(dto.appointmentId())
+                        .orElseThrow(() -> new IllegalArgumentException("No se encontro la cita con ID: " + dto.appointmentId()));
+                if (appointment.getStatus() != AppointmentStatus.IN_PROGRESS) {
+                    throw new AppointmentNotInProcessException(dto.appointmentId());
+                }
             }
-        }
 
-        SaleTransaction transaction = SaleTransaction.builder()
-                .appointment(appointment)
-                .createdBy(currentUser)
-                .items(new ArrayList<>())
-                .build();
-
-        for (CreateSaleItemDTO itemDto : dto.items()) {
-            Spare spare = spareRepository.findById(itemDto.spareId())
-                    .orElseThrow(() -> new SpareNotFoundException(itemDto.spareId()));
-
-            int finalQty = spare.getQuantity() - itemDto.quantity();
-            if (finalQty < 0) {
-                throw new InsufficientStockException("Stock insuficiente para el repuesto: " + spare.getName());
-            }
-            spare.setQuantity(finalQty);
-
-            BigDecimal margin = Boolean.TRUE.equals(spare.getIsOil()) ? BigDecimal.valueOf(0.25) : BigDecimal.valueOf(0.35);
-            BigDecimal salePrice = spare.getPurchasePriceWithVat().multiply(BigDecimal.ONE.add(margin));
-
-            SaleTransactionItem item = SaleTransactionItem.builder()
-                    .saleTransaction(transaction)
-                    .spare(spare)
-                    .quantity(itemDto.quantity())
-                    .salePriceAtMoment(salePrice)
+            SaleTransaction transaction = SaleTransaction.builder()
+                    .appointment(appointment)
+                    .createdBy(currentUser)
+                    .items(new ArrayList<>())
                     .build();
-            transaction.getItems().add(item);
-        }
 
-        return saleMapper.toResponseDTO(saleRepository.save(transaction));
+            for (CreateSaleItemDTO itemDto : dto.items()) {
+                Spare spare = spareRepository.findById(itemDto.spareId())
+                        .orElseThrow(() -> new SpareNotFoundException(itemDto.spareId()));
+
+                int finalQty = spare.getQuantity() - itemDto.quantity();
+                if (finalQty < 0) {
+                    throw new InsufficientStockException("Stock insuficiente para el repuesto: " + spare.getName());
+                }
+                spare.setQuantity(finalQty);
+
+                BigDecimal margin = Boolean.TRUE.equals(spare.getIsOil()) ? BigDecimal.valueOf(0.25) : BigDecimal.valueOf(0.35);
+                BigDecimal salePrice = spare.getPurchasePriceWithVat().multiply(BigDecimal.ONE.add(margin));
+
+                SaleTransactionItem item = SaleTransactionItem.builder()
+                        .saleTransaction(transaction)
+                        .spare(spare)
+                        .quantity(itemDto.quantity())
+                        .salePriceAtMoment(salePrice)
+                        .build();
+                transaction.getItems().add(item);
+            }
+
+            SaleTransaction saved = saleRepository.save(transaction);
+            logService.logSuccess(
+                    LogServiceName.INVENTORY,
+                    LogActionType.REGISTER_SALE,
+                    currentUser.getEmail(),
+                    currentUser.getId(),
+                    "Venta registrada: " + saved.getId()
+            );
+            return saleMapper.toResponseDTO(saved);
+        } catch (RuntimeException ex) {
+            logService.logFailure(
+                    LogServiceName.INVENTORY,
+                    LogActionType.REGISTER_SALE,
+                    currentUser.getEmail(),
+                    currentUser.getId(),
+                    ex.getMessage()
+            );
+            throw ex;
+        }
     }
 
     @Override

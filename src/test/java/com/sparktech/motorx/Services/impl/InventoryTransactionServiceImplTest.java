@@ -1,6 +1,7 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.dto.inventory.*;
 import com.sparktech.motorx.entity.*;
 import com.sparktech.motorx.exception.AppointmentNotInProcessException;
@@ -45,6 +46,8 @@ class InventoryTransactionServiceImplTest {
     @Mock
     private ICurrentUserService currentUserService;
     @Mock
+    private ILogService logService;
+    @Mock
     private PurchaseTransactionMapper purchaseMapper;
     @Mock
     private SaleTransactionMapper saleMapper;
@@ -75,6 +78,7 @@ class InventoryTransactionServiceImplTest {
         assertThat(spare.getQuantity()).isEqualTo(9);
         assertThat(spare.getPurchasePriceWithVat()).isEqualByComparingTo("120");
         verify(employeeRepository, never()).findByUserId(anyLong());
+        verify(logService).logSuccess(eq(LogServiceName.INVENTORY), eq(LogActionType.REGISTER_PURCHASE), eq("admin@test.com"), eq(1L), contains("Compra registrada"));
     }
 
     @Test
@@ -135,6 +139,7 @@ class InventoryTransactionServiceImplTest {
 
         assertThatThrownBy(() -> sut.registerPurchase(new CreatePurchaseTransactionDTO("Proveedor", List.of(new CreatePurchaseItemDTO(999L, 1, BigDecimal.ONE)))))
                 .isInstanceOf(SpareNotFoundException.class);
+        verify(logService).logFailure(eq(LogServiceName.INVENTORY), eq(LogActionType.REGISTER_PURCHASE), eq("admin@test.com"), eq(1L), contains("repuesto"));
     }
 
     @Test
@@ -196,6 +201,7 @@ class InventoryTransactionServiceImplTest {
         verify(saleRepository).save(txCaptor.capture());
         assertThat(txCaptor.getValue().getItems()).hasSize(1);
         assertThat(txCaptor.getValue().getItems().getFirst().getSalePriceAtMoment()).isEqualByComparingTo("135.00");
+        verify(logService).logSuccess(eq(LogServiceName.INVENTORY), eq(LogActionType.REGISTER_SALE), eq("admin@test.com"), eq(1L), contains("Venta registrada"));
     }
 
     @Test
@@ -244,6 +250,7 @@ class InventoryTransactionServiceImplTest {
 
         assertThatThrownBy(() -> sut.registerSale(new CreateSaleTransactionDTO(null, List.of(new CreateSaleItemDTO(30L, 1)))))
                 .isInstanceOf(InsufficientStockException.class);
+        verify(logService).logFailure(eq(LogServiceName.INVENTORY), eq(LogActionType.REGISTER_SALE), eq("admin@test.com"), eq(1L), contains("Stock insuficiente"));
     }
 
     @Test

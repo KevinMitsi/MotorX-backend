@@ -4,6 +4,7 @@ import com.sparktech.motorx.Services.ISpareService;
 import com.sparktech.motorx.dto.error.ResponseErrorDTO;
 import com.sparktech.motorx.dto.inventory.*;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -45,6 +46,11 @@ public class SpareController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     @Operation(summary = "Listar repuestos")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Listado consultado exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
     public ResponseEntity<@NotNull List<SpareResponseDTO>> getAll() {
         return ResponseEntity.ok(spareService.getAllSpares());
     }
@@ -52,28 +58,65 @@ public class SpareController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     @Operation(summary = "Consultar repuesto por ID")
-    public ResponseEntity<@NotNull SpareResponseDTO> getById(@PathVariable Long id) {
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Repuesto encontrado"),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Repuesto no encontrado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
+    public ResponseEntity<@NotNull SpareResponseDTO> getById(
+            @Parameter(description = "ID del repuesto") @PathVariable Long id
+    ) {
         return ResponseEntity.ok(spareService.getSpareById(id));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     @Operation(summary = "Actualizar repuesto")
-    public ResponseEntity<@NotNull SpareResponseDTO> update(@PathVariable Long id, @Valid @RequestBody UpdateSpareDTO dto) {
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Repuesto actualizado"),
+            @ApiResponse(responseCode = "400", description = "Solicitud invalida", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Repuesto no encontrado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "409", description = "Codigo de repuesto duplicado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
+    public ResponseEntity<@NotNull SpareResponseDTO> update(
+            @Parameter(description = "ID del repuesto") @PathVariable Long id,
+            @Valid @RequestBody UpdateSpareDTO dto
+    ) {
         return ResponseEntity.ok(spareService.updateSpare(id, dto));
     }
 
     @PatchMapping("/{id}/purchase-price")
     @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
     @Operation(summary = "Actualizar precio de compra")
-    public ResponseEntity<@NotNull SpareResponseDTO> updatePrice(@PathVariable Long id, @Valid @RequestBody UpdateSparePurchasePriceDTO dto) {
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Precio actualizado"),
+            @ApiResponse(responseCode = "400", description = "Solicitud invalida", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Repuesto no encontrado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
+    public ResponseEntity<@NotNull SpareResponseDTO> updatePrice(
+            @Parameter(description = "ID del repuesto") @PathVariable Long id,
+            @Valid @RequestBody UpdateSparePurchasePriceDTO dto
+    ) {
         return ResponseEntity.ok(spareService.updatePurchasePrice(id, dto));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Eliminar repuesto")
-    public ResponseEntity<@NotNull Void> delete(@PathVariable Long id) {
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Repuesto eliminado"),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Repuesto no encontrado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
+    public ResponseEntity<@NotNull Void> delete(
+            @Parameter(description = "ID del repuesto") @PathVariable Long id
+    ) {
         spareService.deleteSpare(id);
         return ResponseEntity.noContent().build();
     }

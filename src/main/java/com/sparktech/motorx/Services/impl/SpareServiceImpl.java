@@ -1,8 +1,13 @@
 package com.sparktech.motorx.Services.impl;
 
+import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.Services.ISpareService;
 import com.sparktech.motorx.dto.inventory.*;
+import com.sparktech.motorx.entity.LogActionType;
+import com.sparktech.motorx.entity.LogServiceName;
 import com.sparktech.motorx.entity.Spare;
+import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.exception.DuplicateSpareCodeException;
 import com.sparktech.motorx.exception.InvalidWarehouseLocationException;
 import com.sparktech.motorx.exception.SpareNotFoundException;
@@ -24,16 +29,38 @@ public class SpareServiceImpl implements ISpareService {
 
     private final JpaSpareRepository spareRepository;
     private final SpareMapper spareMapper;
+    private final ICurrentUserService currentUserService;
+    private final ILogService logService;
 
     @Override
     @Transactional
     public SpareResponseDTO createSpare(CreateSpareDTO dto) {
-        validateCodesForCreate(dto.savCode(), dto.spareCode());
-        validateWarehouseLocation(dto.warehouseLocation());
+        UserEntity actor = currentUserService.getAuthenticatedUser();
+        try {
+            validateCodesForCreate(dto.savCode(), dto.spareCode());
+            validateWarehouseLocation(dto.warehouseLocation());
 
-        Spare spare = spareMapper.toEntity(dto);
-        Spare saved = spareRepository.save(spare);
-        return toResponse(saved);
+            Spare spare = spareMapper.toEntity(dto);
+            Spare saved = spareRepository.save(spare);
+
+            logService.logSuccess(
+                    LogServiceName.SPARE,
+                    LogActionType.CREATE_SPARE,
+                    actor.getEmail(),
+                    actor.getId(),
+                    "Repuesto creado: " + saved.getId()
+            );
+            return toResponse(saved);
+        } catch (RuntimeException ex) {
+            logService.logFailure(
+                    LogServiceName.SPARE,
+                    LogActionType.CREATE_SPARE,
+                    actor.getEmail(),
+                    actor.getId(),
+                    ex.getMessage()
+            );
+            throw ex;
+        }
     }
 
     @Override
@@ -51,27 +78,86 @@ public class SpareServiceImpl implements ISpareService {
     @Override
     @Transactional
     public SpareResponseDTO updateSpare(Long id, UpdateSpareDTO dto) {
-        Spare spare = findSpareOrThrow(id);
-        validateCodesForUpdate(dto.savCode(), dto.spareCode(), id);
-        validateWarehouseLocation(dto.warehouseLocation());
+        UserEntity actor = currentUserService.getAuthenticatedUser();
+        try {
+            Spare spare = findSpareOrThrow(id);
+            validateCodesForUpdate(dto.savCode(), dto.spareCode(), id);
+            validateWarehouseLocation(dto.warehouseLocation());
 
-        spareMapper.updateEntity(spare, dto);
-        return toResponse(spareRepository.save(spare));
+            spareMapper.updateEntity(spare, dto);
+            Spare saved = spareRepository.save(spare);
+            logService.logSuccess(
+                    LogServiceName.SPARE,
+                    LogActionType.UPDATE_SPARE,
+                    actor.getEmail(),
+                    actor.getId(),
+                    "Repuesto actualizado: " + saved.getId()
+            );
+            return toResponse(saved);
+        } catch (RuntimeException ex) {
+            logService.logFailure(
+                    LogServiceName.SPARE,
+                    LogActionType.UPDATE_SPARE,
+                    actor.getEmail(),
+                    actor.getId(),
+                    ex.getMessage()
+            );
+            throw ex;
+        }
     }
 
     @Override
     @Transactional
     public SpareResponseDTO updatePurchasePrice(Long id, UpdateSparePurchasePriceDTO dto) {
-        Spare spare = findSpareOrThrow(id);
-        spare.setPurchasePriceWithVat(dto.purchasePriceWithVat());
-        return toResponse(spareRepository.save(spare));
+        UserEntity actor = currentUserService.getAuthenticatedUser();
+        try {
+            Spare spare = findSpareOrThrow(id);
+            spare.setPurchasePriceWithVat(dto.purchasePriceWithVat());
+            Spare saved = spareRepository.save(spare);
+            logService.logSuccess(
+                    LogServiceName.SPARE,
+                    LogActionType.UPDATE_SPARE_PURCHASE_PRICE,
+                    actor.getEmail(),
+                    actor.getId(),
+                    "Precio de compra actualizado para repuesto: " + saved.getId()
+            );
+            return toResponse(saved);
+        } catch (RuntimeException ex) {
+            logService.logFailure(
+                    LogServiceName.SPARE,
+                    LogActionType.UPDATE_SPARE_PURCHASE_PRICE,
+                    actor.getEmail(),
+                    actor.getId(),
+                    ex.getMessage()
+            );
+            throw ex;
+        }
     }
 
     @Override
     @Transactional
     public void deleteSpare(Long id) {
-        Spare spare = findSpareOrThrow(id);
-        spareRepository.delete(spare);
+        UserEntity actor = currentUserService.getAuthenticatedUser();
+        try {
+            Spare spare = findSpareOrThrow(id);
+            spareRepository.delete(spare);
+            logService.logSuccess(
+                    LogServiceName.SPARE,
+                    LogActionType.DELETE_SPARE,
+                    actor.getEmail(),
+                    actor.getId(),
+                    "Repuesto eliminado: " + id
+            );
+        } catch (RuntimeException ex) {
+            logService.logFailure(
+                    LogServiceName.SPARE,
+                    LogActionType.DELETE_SPARE,
+                    actor.getEmail(),
+                    actor.getId(),
+                    ex.getMessage()
+            );
+            throw ex;
+        }
     }
 
     private Spare findSpareOrThrow(Long id) {

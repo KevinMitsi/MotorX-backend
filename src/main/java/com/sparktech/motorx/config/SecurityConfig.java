@@ -115,6 +115,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/inventory/sales/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
 
                         .requestMatchers("/api/v1/reception/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers("/api/v1/notifications/**").authenticated()
                         .requestMatchers("/api/v1/user/**").authenticated()
 
                         //end-points health
