@@ -1,7 +1,10 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.ILogService;
+import com.sparktech.motorx.Services.INotificationService;
 import com.sparktech.motorx.dto.inventory.*;
+import com.sparktech.motorx.dto.notification.CreateNotificationDTO;
 import com.sparktech.motorx.entity.*;
 import com.sparktech.motorx.exception.AppointmentNotInProcessException;
 import com.sparktech.motorx.exception.InsufficientStockException;
@@ -43,7 +46,13 @@ class InventoryTransactionServiceImplTest {
     @Mock
     private JpaEmployeeRepository employeeRepository;
     @Mock
+    private JpaUserRepository userRepository;
+    @Mock
     private ICurrentUserService currentUserService;
+    @Mock
+    private ILogService logService;
+    @Mock
+    private INotificationService notificationService;
     @Mock
     private PurchaseTransactionMapper purchaseMapper;
     @Mock
@@ -75,6 +84,7 @@ class InventoryTransactionServiceImplTest {
         assertThat(spare.getQuantity()).isEqualTo(9);
         assertThat(spare.getPurchasePriceWithVat()).isEqualByComparingTo("120");
         verify(employeeRepository, never()).findByUserId(anyLong());
+        verify(logService).logSuccess(eq(LogServiceName.INVENTORY), eq(LogActionType.REGISTER_PURCHASE), eq("admin@test.com"), eq(1L), contains("Compra registrada"));
     }
 
     @Test
@@ -135,6 +145,7 @@ class InventoryTransactionServiceImplTest {
 
         assertThatThrownBy(() -> sut.registerPurchase(new CreatePurchaseTransactionDTO("Proveedor", List.of(new CreatePurchaseItemDTO(999L, 1, BigDecimal.ONE)))))
                 .isInstanceOf(SpareNotFoundException.class);
+        verify(logService).logFailure(eq(LogServiceName.INVENTORY), eq(LogActionType.REGISTER_PURCHASE), eq("admin@test.com"), eq(1L), contains("repuesto"));
     }
 
     @Test
@@ -196,6 +207,32 @@ class InventoryTransactionServiceImplTest {
         verify(saleRepository).save(txCaptor.capture());
         assertThat(txCaptor.getValue().getItems()).hasSize(1);
         assertThat(txCaptor.getValue().getItems().getFirst().getSalePriceAtMoment()).isEqualByComparingTo("135.00");
+        verify(logService).logSuccess(eq(LogServiceName.INVENTORY), eq(LogActionType.REGISTER_SALE), eq("admin@test.com"), eq(1L), contains("Venta registrada"));
+    }
+
+    @Test
+    @DisplayName("registerSale notifica al admin cuando repuesto queda bajo umbral")
+    void registerSaleShouldNotifyAdminsWhenStockIsBelowThreshold() {
+        UserEntity admin = user(1L, Role.ADMIN);
+        Spare spare = spare(40L, "Filtro", 5, new BigDecimal("30"), false);
+        spare.setStockThreshold(4);
+        spare.setWarehouseLocation("01-02-03-04");
+
+        when(currentUserService.getAuthenticatedUser()).thenReturn(admin);
+        when(spareRepository.findById(40L)).thenReturn(Optional.of(spare));
+        when(saleRepository.save(any(SaleTransaction.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(saleMapper.toResponseDTO(any(SaleTransaction.class))).thenReturn(
+                new SaleTransactionResponseDTO(9L, LocalDateTime.now(), null, 1L, "admin@test.com", new BigDecimal("40"), List.of())
+        );
+        when(userRepository.findByRole(Role.ADMIN)).thenReturn(List.of(admin));
+
+        sut.registerSale(new CreateSaleTransactionDTO(null, List.of(new CreateSaleItemDTO(40L, 2))));
+
+        verify(notificationService).createNotification(argThat((CreateNotificationDTO dto) ->
+                dto.userId().equals(1L)
+                        && dto.urgency() == NotificationUrgency.CRITICAL
+                        && dto.description().contains("umbral")
+        ));
     }
 
     @Test
@@ -244,6 +281,7 @@ class InventoryTransactionServiceImplTest {
 
         assertThatThrownBy(() -> sut.registerSale(new CreateSaleTransactionDTO(null, List.of(new CreateSaleItemDTO(30L, 1)))))
                 .isInstanceOf(InsufficientStockException.class);
+        verify(logService).logFailure(eq(LogServiceName.INVENTORY), eq(LogActionType.REGISTER_SALE), eq("admin@test.com"), eq(1L), contains("Stock insuficiente"));
     }
 
     @Test
@@ -357,6 +395,8 @@ class InventoryTransactionServiceImplTest {
         spare.setId(id);
         spare.setName(name);
         spare.setQuantity(qty);
+        spare.setStockThreshold(0);
+        spare.setWarehouseLocation("01-01-01-01");
         spare.setPurchasePriceWithVat(purchasePrice);
         spare.setIsOil(isOil);
         return spare;

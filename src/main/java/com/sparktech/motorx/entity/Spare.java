@@ -49,6 +49,10 @@ public class Spare {
     @Builder.Default
     private Integer quantity = 0;
 
+    @Column(name = "stock_threshold", nullable = false)
+    @Builder.Default
+    private Integer stockThreshold = 0;
+
     @Column(name = "warehouse_location", nullable = false, length = 20)
     private String warehouseLocation;
 

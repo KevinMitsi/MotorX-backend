@@ -1,6 +1,8 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IEmailNotificationService;
+import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.dto.appointment.AppointmentResponseDTO;
 import com.sparktech.motorx.dto.notification.EmailDTO;
 import com.sparktech.motorx.dto.reception.ConfirmReceptionDTO;
@@ -38,9 +40,21 @@ class ReceptionServiceImplTest {
     private AppointmentMapper appointmentMapper;
     @Mock
     private IEmailNotificationService emailNotificationService;
+    @Mock
+    private ICurrentUserService currentUserService;
+    @Mock
+    private ILogService logService;
 
     @InjectMocks
     private ReceptionServiceImpl sut;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        UserEntity actor = new UserEntity();
+        actor.setId(55L);
+        actor.setEmail("reception@test.com");
+        when(currentUserService.getAuthenticatedUser()).thenReturn(actor);
+    }
 
     @Test
     @DisplayName("initiateReception lanza AppointmentNotFoundException cuando no existe")
@@ -77,6 +91,7 @@ class ReceptionServiceImplTest {
         ArgumentCaptor<EmailDTO> captor = ArgumentCaptor.forClass(EmailDTO.class);
         verify(emailNotificationService).sendMail(captor.capture());
         assertThat(captor.getValue().recipient()).isEqualTo("client@test.com");
+        verify(logService).logSuccess(eq(LogServiceName.RECEPTION), eq(LogActionType.INITIATE_RECEPTION), eq("reception@test.com"), eq(55L), contains("iniciada"));
     }
 
     @Test
@@ -108,6 +123,7 @@ class ReceptionServiceImplTest {
         assertThatThrownBy(() -> sut.confirmReception(new ConfirmReceptionDTO("ABC123", "9999")))
                 .isInstanceOf(InvalidVerificationCodeException.class)
                 .hasMessageContaining("incorrecto");
+        verify(logService).logFailure(eq(LogServiceName.RECEPTION), eq(LogActionType.CONFIRM_RECEPTION), eq("reception@test.com"), eq(55L), contains("incorrecto"));
     }
 
     @Test
@@ -136,6 +152,7 @@ class ReceptionServiceImplTest {
         assertThat(appointment.getProcessStartedAt()).isNotNull();
         assertThat(appointment.getVerificationCode()).isNull();
         assertThat(appointment.getVerificationCodeCreatedAt()).isNull();
+        verify(logService).logSuccess(eq(LogServiceName.RECEPTION), eq(LogActionType.CONFIRM_RECEPTION), eq("reception@test.com"), eq(55L), contains("confirmada"));
     }
 
     private AppointmentEntity appointment(AppointmentStatus status) {

@@ -6,6 +6,10 @@ public enum LogServiceName {
     PASSWORD_RESET,
     APPOINTMENT,
     VEHICLE,
-    ADMIN
+    ADMIN,
+    SPARE,
+    INVENTORY,
+    RECEPTION,
+    NOTIFICATION
 }
 

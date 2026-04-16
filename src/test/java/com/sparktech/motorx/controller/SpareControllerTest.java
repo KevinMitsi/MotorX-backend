@@ -58,7 +58,7 @@ class SpareControllerTest {
     @WithMockUser
     @DisplayName("POST /api/v1/spares retorna 201")
     void shouldCreateSpare() throws Exception {
-        CreateSpareDTO request = new CreateSpareDTO("Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("100"), false, "Prov", 3, "01-01-01-01");
+        CreateSpareDTO request = new CreateSpareDTO("Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("100"), false, "Prov", 3, 2, "01-01-01-01");
         when(spareService.createSpare(any(CreateSpareDTO.class))).thenReturn(response(1L));
 
         mockMvc.perform(post("/api/v1/spares")
@@ -106,7 +106,7 @@ class SpareControllerTest {
     @WithMockUser
     @DisplayName("PUT /api/v1/spares/{id} actualiza")
     void shouldUpdateSpare() throws Exception {
-        UpdateSpareDTO request = new UpdateSpareDTO("Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("110"), false, "Prov", 4, "01-01-01-01");
+        UpdateSpareDTO request = new UpdateSpareDTO("Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("110"), false, "Prov", 4, 3, "01-01-01-01");
         when(spareService.updateSpare(eq(7L), any(UpdateSpareDTO.class))).thenReturn(response(7L));
 
         mockMvc.perform(put("/api/v1/spares/7")
@@ -142,8 +142,31 @@ class SpareControllerTest {
         verify(spareService).deleteSpare(9L);
     }
 
+    @Test
+    @WithMockUser
+    @DisplayName("GET /api/v1/spares/below-threshold retorna lista")
+    void shouldGetBelowThreshold() throws Exception {
+        when(spareService.getSparesBelowThreshold()).thenReturn(List.of(response(2L)));
+
+        mockMvc.perform(get("/api/v1/spares/below-threshold"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(2)));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("POST /api/v1/spares/{id}/notify-restock retorna cantidad")
+    void shouldNotifyRestock() throws Exception {
+        when(spareService.notifyWarehouseWorkersToRestock(6L)).thenReturn(4L);
+
+        mockMvc.perform(post("/api/v1/spares/6/notify-restock"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", is(4)));
+    }
+
     private SpareResponseDTO response(Long id) {
-        return new SpareResponseDTO(id, "Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("100"), new BigDecimal("135"), false, "Prov", 3, "01-01-01-01");
+        return new SpareResponseDTO(id, "Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("100"), new BigDecimal("135"), false, "Prov", 3, 2, "01-01-01-01");
     }
 
     @TestConfiguration

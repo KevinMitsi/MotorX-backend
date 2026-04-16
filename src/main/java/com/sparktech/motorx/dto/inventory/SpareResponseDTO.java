@@ -16,6 +16,7 @@ public record SpareResponseDTO(
         Boolean isOil,
         String supplier,
         Integer quantity,
+        Integer stockThreshold,
         String warehouseLocation
 ) {
 }
