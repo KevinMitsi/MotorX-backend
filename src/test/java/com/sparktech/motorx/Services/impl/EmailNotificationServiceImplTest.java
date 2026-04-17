@@ -15,6 +15,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -334,6 +336,52 @@ class EmailNotificationServiceImplTest {
             captor.getAllValues().forEach(emailDTO ->
                     assertThat(emailDTO.body())
                             .startsWith("Hola Carlos Pérez"));
+        }
+    }
+
+    @Nested
+    @DisplayName("sendTemplatedMail()")
+    class TemplatedMailTests {
+
+        @Test
+        @DisplayName("Renderiza placeholders de plantilla HTML y delega en sendMail")
+        void givenExistingTemplate_thenRenderAndDelegateToSendMail() {
+            doNothing().when(sut).sendMail(any());
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("USER_NAME", "Kevin");
+            placeholders.put("USER_EMAIL", "kevin@test.com");
+
+            sut.sendTemplatedMail(
+                    "kevin@test.com",
+                    "Inicio de sesión detectado - Jmmotoservicio",
+                    "login-alert.html",
+                    placeholders
+            );
+
+            verify(sut).sendMail(emailCaptor.capture());
+            EmailDTO sent = emailCaptor.getValue();
+            assertThat(sent.recipient()).isEqualTo("kevin@test.com");
+            assertThat(sent.subject()).contains("Inicio de sesión");
+            assertThat(sent.body()).contains("Hola Kevin");
+            assertThat(sent.body()).contains("kevin@test.com");
+            assertThat(sent.body()).contains("<html");
+        }
+
+        @Test
+        @DisplayName("Si plantilla no existe, utiliza FALLBACK_BODY")
+        void givenMissingTemplate_thenUseFallbackBody() {
+            doNothing().when(sut).sendMail(any());
+            Map<String, String> placeholders = Map.of("FALLBACK_BODY", "fallback de prueba");
+
+            sut.sendTemplatedMail(
+                    "kevin@test.com",
+                    "Prueba fallback",
+                    "template-no-existe.html",
+                    placeholders
+            );
+
+            verify(sut).sendMail(emailCaptor.capture());
+            assertThat(emailCaptor.getValue().body()).isEqualTo("fallback de prueba");
         }
     }
 }

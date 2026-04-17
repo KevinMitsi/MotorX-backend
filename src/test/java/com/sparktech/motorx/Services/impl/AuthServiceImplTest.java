@@ -1,6 +1,7 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.IEmailNotificationService;
 import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.Services.IUserService;
 import com.sparktech.motorx.Services.IVerificationCodeCacheService;
@@ -50,6 +51,7 @@ class AuthServiceImplTest {
     @Mock private IVerificationCodeService verificationCodeService;
     @Mock private IVerificationCodeCacheService cacheService;
     @Mock private ILogService logService;
+    @Mock private IEmailNotificationService emailNotificationService;
 
     @InjectMocks
     private AuthServiceImpl sut;
@@ -118,6 +120,12 @@ class AuthServiceImplTest {
 
             // 2FA NO debe invocarse para admin
             verifyNoInteractions(verificationCodeService);
+            verify(emailNotificationService).sendTemplatedMail(
+                    eq("user@test.com"),
+                    contains("Inicio de sesión"),
+                    eq("login-alert.html"),
+                    anyMap()
+            );
         }
 
         @Test
@@ -136,6 +144,12 @@ class AuthServiceImplTest {
 
             verify(verificationCodeService, times(1))
                     .generateAndSendVerificationCode(client);
+            verify(emailNotificationService).sendTemplatedMail(
+                    eq("user@test.com"),
+                    contains("Inicio de sesión"),
+                    eq("login-alert.html"),
+                    anyMap()
+            );
         }
 
         @Test
@@ -223,6 +237,12 @@ class AuthServiceImplTest {
 
             // userService.register() debe haberse llamado exactamente una vez
             verify(userService, times(1)).register(request);
+            verify(emailNotificationService).sendTemplatedMail(
+                    eq("nuevo@test.com"),
+                    contains("Bienvenido"),
+                    eq("welcome.html"),
+                    anyMap()
+            );
         }
 
         @Test

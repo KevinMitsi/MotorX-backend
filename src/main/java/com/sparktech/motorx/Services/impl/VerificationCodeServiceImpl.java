@@ -3,7 +3,6 @@ package com.sparktech.motorx.Services.impl;
 import com.sparktech.motorx.Services.IEmailNotificationService;
 import com.sparktech.motorx.Services.IVerificationCodeCacheService;
 import com.sparktech.motorx.Services.IVerificationCodeService;
-import com.sparktech.motorx.dto.notification.EmailDTO;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.exception.VerificationCodeException;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +11,8 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -48,8 +49,12 @@ public class VerificationCodeServiceImpl implements IVerificationCodeService {
     private void sendVerificationEmail(UserEntity user, String code) {
         try {
             String subject = "Código de Verificación - Jmmotoservicio";
-            EmailDTO emailDTO = getEmailDTO(user, code, subject);
-            emailNotificationService.sendMail(emailDTO);
+            emailNotificationService.sendTemplatedMail(
+                    user.getEmail(),
+                    subject,
+                    "two-factor-code.html",
+                    getTwoFactorPlaceholders(user, code)
+            );
 
             log.info("Código de verificación enviado a: {}", user.getEmail());
         } catch (Exception e) {
@@ -58,22 +63,19 @@ public class VerificationCodeServiceImpl implements IVerificationCodeService {
         }
     }
 
-    private static @NotNull EmailDTO getEmailDTO(UserEntity user, String code, String subject) {
-        String body = String.format(
-                """
-                Hola %s, hemos detectado un intento de inicio de sesión,
-                
-                Tu código de verificación es: %s
-                
-                Este código expira en 10 minutos.
-                
-                Si no solicitaste este código, cambia instántenamente tu contraseña.
-                """,
-                user.getName() != null ? user.getName() : "Usuario",
-                code
-        );
-
-        return new EmailDTO(subject, body, user.getEmail());
+    private static @NotNull Map<String, String> getTwoFactorPlaceholders(UserEntity user, String code) {
+        String userName = user.getName() != null ? user.getName() : "Usuario";
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("USER_NAME", userName);
+        placeholders.put("VERIFICATION_CODE", code);
+        placeholders.put("EXPIRATION_MINUTES", String.valueOf(CODE_EXPIRATION_MINUTES));
+        placeholders.put("FALLBACK_BODY", String.format(
+                "Hola %s, tu código de verificación es %s. Expira en %d minutos.",
+                userName,
+                code,
+                CODE_EXPIRATION_MINUTES
+        ));
+        return placeholders;
     }
 }
 
