@@ -25,6 +25,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.Map;
+
 
 @Service
 @Slf4j
@@ -40,6 +43,7 @@ public class AuthServiceImpl implements IAuthService {
     private final IVerificationCodeService verificationCodeService;
     private final IVerificationCodeCacheService cacheService;
     private final ILogService logService;
+    private final IEmailNotificationService emailNotificationService;
 
     @Override
     @Transactional
@@ -64,6 +68,7 @@ public class AuthServiceImpl implements IAuthService {
 
             // Si el usuario es ADMIN, omitir 2FA y devolver token directamente
             if (com.sparktech.motorx.entity.Role.ADMIN.equals(user.getRole())) {
+                sendLoginAlertEmail(user);
                 log.info("Usuario ADMIN detectado, omitiendo 2FA para: {}", loginRequest.email());
                 logService.logSuccess(
                         LogServiceName.AUTHENTICATION,
@@ -82,6 +87,7 @@ public class AuthServiceImpl implements IAuthService {
             }
 
             // Generar y enviar código de verificación 2FA (se almacena automáticamente en caché)
+            sendLoginAlertEmail(user);
             verificationCodeService.generateAndSendVerificationCode(user);
             log.info("Código de verificación generado y enviado para: {}", loginRequest.email());
             logService.logSuccess(
@@ -119,6 +125,8 @@ public class AuthServiceImpl implements IAuthService {
 
             String token = result.token;
             UserEntity user = result.user;
+
+            sendWelcomeEmail(user);
 
             log.info("Usuario registrado y autenticado: {}", registerRequest.email());
             logService.logSuccess(
@@ -277,6 +285,33 @@ public class AuthServiceImpl implements IAuthService {
         String token = jwtService.generateToken(userDetails);
 
         return new AuthResult(token, user);
+    }
+
+    private void sendLoginAlertEmail(UserEntity user) {
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("USER_NAME", user.getName() != null ? user.getName() : "Usuario");
+        placeholders.put("USER_EMAIL", user.getEmail());
+        placeholders.put("FALLBACK_BODY", "Hola " + placeholders.get("USER_NAME") + ", detectamos un inicio de sesión en tu cuenta.");
+
+        emailNotificationService.sendTemplatedMail(
+                user.getEmail(),
+                "Inicio de sesión detectado - Jmmotoservicio",
+                "login-alert.html",
+                placeholders
+        );
+    }
+
+    private void sendWelcomeEmail(UserEntity user) {
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("USER_NAME", user.getName() != null ? user.getName() : "Usuario");
+        placeholders.put("FALLBACK_BODY", "Bienvenido a la aplicación de Jmmotoservicio.");
+
+        emailNotificationService.sendTemplatedMail(
+                user.getEmail(),
+                "Bienvenido a Jmmotoservicio",
+                "welcome.html",
+                placeholders
+        );
     }
 
 }

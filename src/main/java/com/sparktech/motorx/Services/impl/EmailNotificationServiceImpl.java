@@ -12,8 +12,14 @@ import org.simplejavamail.api.mailer.config.TransportStrategy;
 import org.simplejavamail.email.EmailBuilder;
 import org.simplejavamail.mailer.MailerBuilder;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +27,7 @@ import org.springframework.stereotype.Service;
 public class EmailNotificationServiceImpl implements IEmailNotificationService {
 
     public static final String HOLA = "Hola ";
+    private static final String EMAIL_TEMPLATES_BASE_PATH = "static/emails/";
     @Value("${SMTP_HOST:smtp.gmail.com}")
     private String smtpHost;
 
@@ -45,12 +52,22 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
             return;
         }
 
-        Email email = EmailBuilder.startingBlank()
-                .from(smtpUsername)
-                .to(emailDTO.recipient())
-                .withSubject(emailDTO.subject())
-                .withPlainText(emailDTO.body())
-                .buildEmail();
+        Email email;
+        if (isHtmlBody(emailDTO.body())) {
+            email = EmailBuilder.startingBlank()
+                    .from(smtpUsername)
+                    .to(emailDTO.recipient())
+                    .withSubject(emailDTO.subject())
+                    .withHTMLText(emailDTO.body())
+                    .buildEmail();
+        } else {
+            email = EmailBuilder.startingBlank()
+                    .from(smtpUsername)
+                    .to(emailDTO.recipient())
+                    .withSubject(emailDTO.subject())
+                    .withPlainText(emailDTO.body())
+                    .buildEmail();
+        }
 
         try (Mailer mailer = MailerBuilder
                 .withSMTPServer(smtpHost, smtpPort, smtpUsername, smtpPassword)
@@ -64,6 +81,41 @@ public class EmailNotificationServiceImpl implements IEmailNotificationService {
             log.error("Error sending email to: {}", emailDTO.recipient(), e);
             // manejar localmente: log y regresar (los métodos que llaman ya están @Async)
         }
+    }
+
+    @Override
+    @Async
+    public void sendTemplatedMail(String recipient, String subject, String templateName, Map<String, String> placeholders) {
+        String templateBody = renderTemplate(templateName, placeholders);
+        sendMail(new EmailDTO(subject, templateBody, recipient));
+    }
+
+    private String renderTemplate(String templateName, Map<String, String> placeholders) {
+        String templatePath = EMAIL_TEMPLATES_BASE_PATH + templateName;
+        try {
+            ClassPathResource resource = new ClassPathResource(templatePath);
+            String html = StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
+
+            if (placeholders == null || placeholders.isEmpty()) {
+                return html;
+            }
+
+            String rendered = html;
+            for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+                String replacement = entry.getValue() == null ? "" : entry.getValue();
+                rendered = rendered.replace("{{" + entry.getKey() + "}}", replacement);
+            }
+            return rendered;
+        } catch (IOException e) {
+            log.warn("No se pudo cargar plantilla de correo {}. Se usará texto plano.", templatePath, e);
+            return placeholders != null
+                    ? placeholders.getOrDefault("FALLBACK_BODY", "No fue posible renderizar la plantilla de correo.")
+                    : "No fue posible renderizar la plantilla de correo.";
+        }
+    }
+
+    private boolean isHtmlBody(String body) {
+        return body != null && body.stripLeading().startsWith("<");
     }
 
     @Override
