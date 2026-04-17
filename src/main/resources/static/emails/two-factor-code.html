@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codigo de verificacion 2FA</title>
+</head>
+<body style="margin:0;padding:0;background:#eef2f7;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#111827;">
+<div style="max-width:700px;margin:24px auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,0.08);">
+    <header style="background:linear-gradient(135deg,#047857,#10b981);padding:26px 28px;color:#ffffff;">
+        <h1 style="margin:0;font-size:24px;font-weight:800;">JMmotoservicio</h1>
+        <p style="margin:8px 0 0 0;font-size:14px;opacity:0.95;">Autenticacion de dos factores (2FA)</p>
+    </header>
+
+    <main style="padding:28px 30px;background:#ffffff;">
+        <section style="margin-bottom:16px;">
+            <h2 style="margin:0 0 10px 0;font-size:22px;font-family:Georgia,'Times New Roman',serif;color:#064e3b;">Hola {{USER_NAME}},</h2>
+            <p style="margin:0;font-size:15px;line-height:1.65;">Detectamos un intento de inicio de sesion. Para continuar, usa el siguiente codigo de verificacion:</p>
+        </section>
+
+        <section style="margin:24px 0;background:#374151;border-radius:12px;padding:18px 22px;text-align:center;border:1px solid #1f2937;">
+            <p style="margin:0 0 8px 0;color:#d1d5db;font-size:13px;text-transform:uppercase;letter-spacing:1.4px;">Codigo 2FA</p>
+            <div style="font-size:42px;font-weight:800;letter-spacing:8px;color:#f9fafb;line-height:1.2;">{{VERIFICATION_CODE}}</div>
+        </section>
+
+        <section style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:10px;padding:14px 16px;">
+            <p style="margin:0 0 6px 0;font-size:14px;line-height:1.6;">Este codigo expira en <strong>{{EXPIRATION_MINUTES}} minutos</strong>.</p>
+            <p style="margin:0;font-size:14px;line-height:1.6;">Si no solicitaste este acceso, cambia tu contrasena inmediatamente.</p>
+        </section>
+    </main>
+
+    <footer style="background:#111827;padding:18px 28px;color:#e5e7eb;">
+        <p style="margin:0 0 5px 0;font-size:12px;">Mantener tu cuenta segura es prioridad para nosotros.</p>
+        <p style="margin:0;font-size:12px;">JMmotoservicio - Seguridad de Cuenta</p>
+    </footer>
+</div>
+</body>
+</html>
+

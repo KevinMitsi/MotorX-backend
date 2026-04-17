@@ -2,12 +2,13 @@ package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.IEmailNotificationService;
 import com.sparktech.motorx.Services.IVerificationCodeCacheService;
-import com.sparktech.motorx.dto.notification.EmailDTO;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.exception.VerificationCodeException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 
 import static org.assertj.core.api.Assertions.*;
@@ -43,7 +44,7 @@ class VerificationCodeServiceImplTest {
     }
 
     @Test
-    @DisplayName("generateAndSendVerificationCode guarda el código en cache y envía un EmailDTO con el código y destinatario correctos")
+    @DisplayName("generateAndSendVerificationCode guarda el código en cache y envía correo 2FA con plantilla")
     void generateAndSendVerificationCode_savesAndSendsEmail() {
         // Arrange
         UserEntity user = new UserEntity();
@@ -57,28 +58,40 @@ class VerificationCodeServiceImplTest {
         // capturamos el código pasado al cache
         verify(cacheService, times(1)).saveCode(eq("test.user@example.com"), any(String.class), eq(10));
 
-        // Verificamos que se intentó enviar un EmailDTO hacia el email del usuario
-        // Como EmailDTO es un record, podemos capturarlo con ArgumentCaptor o verificar llamada con any
-        verify(emailNotificationService, times(1)).sendMail(any(EmailDTO.class));
+        // Verificamos que se intentó enviar correo templado hacia el email del usuario
+        verify(emailNotificationService, times(1)).sendTemplatedMail(
+                eq("test.user@example.com"),
+                contains("Código de Verificación"),
+                eq("two-factor-code.html"),
+                anyMap()
+        );
 
         // Adicional: comprobar que el EmailDTO enviado contiene el email y el código almacenado
         // Para eso, usamos un Answer para capturar el EmailDTO pasado
         // (volver a mockear para capturar el argumento)
         reset(emailNotificationService);
         doAnswer(invocation -> {
-            EmailDTO dto = invocation.getArgument(0);
-            assertThat(dto.recipient()).isEqualTo("test.user@example.com");
-            assertThat(dto.subject()).containsIgnoringCase("Código de Verificación");
-            // El body debe incluir el nombre del usuario y el código (6 dígitos)
-            assertThat(dto.body()).contains("Test User");
-            assertThat(dto.body()).matches("(?s).*\\d{6}.*");
+            Map<String, String> placeholders = invocation.getArgument(3);
+            assertThat(placeholders.get("USER_NAME")).isEqualTo("Test User");
+            assertThat(placeholders.get("VERIFICATION_CODE")).matches("\\d{6}");
+            assertThat(placeholders.get("EXPIRATION_MINUTES")).isEqualTo("10");
             return null;
-        }).when(emailNotificationService).sendMail(any(EmailDTO.class));
+        }).when(emailNotificationService).sendTemplatedMail(
+                anyString(),
+                anyString(),
+                anyString(),
+                anyMap()
+        );
 
         // Llamar de nuevo para activar el Answer y ejecutar las aserciones
         sut.generateAndSendVerificationCode(user);
 
-        verify(emailNotificationService, times(1)).sendMail(any(EmailDTO.class));
+        verify(emailNotificationService, times(1)).sendTemplatedMail(
+                eq("test.user@example.com"),
+                contains("Código de Verificación"),
+                eq("two-factor-code.html"),
+                anyMap()
+        );
     }
 
     @Test
@@ -89,7 +102,12 @@ class VerificationCodeServiceImplTest {
         user.setEmail("fail.user@example.com");
         user.setName("Fail User");
 
-        doThrow(new RuntimeException("SMTP down")).when(emailNotificationService).sendMail(any(EmailDTO.class));
+        doThrow(new RuntimeException("SMTP down")).when(emailNotificationService).sendTemplatedMail(
+                anyString(),
+                anyString(),
+                anyString(),
+                anyMap()
+        );
 
         // Act & Assert
         assertThatThrownBy(() -> sut.generateAndSendVerificationCode(user))
@@ -98,7 +116,12 @@ class VerificationCodeServiceImplTest {
 
         // Aun así, el código debe haberse guardado en cache antes del fallo
         verify(cacheService, times(1)).saveCode(eq("fail.user@example.com"), any(String.class), eq(10));
-        verify(emailNotificationService, times(1)).sendMail(any(EmailDTO.class));
+        verify(emailNotificationService, times(1)).sendTemplatedMail(
+                eq("fail.user@example.com"),
+                contains("Código de Verificación"),
+                eq("two-factor-code.html"),
+                anyMap()
+        );
     }
 }
 
