@@ -31,7 +31,7 @@ public class SpareController {
     private final ISpareService spareService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER')")
     @Operation(summary = "Crear repuesto")
     @ApiResponses( value= {
             @ApiResponse(responseCode = "201", description = "Repuesto creado"),
@@ -44,7 +44,7 @@ public class SpareController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER','RECEPTIONIST')")
     @Operation(summary = "Listar repuestos")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Listado consultado exitosamente"),
@@ -56,7 +56,7 @@ public class SpareController {
     }
 
     @GetMapping("/below-threshold")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER','RECEPTIONIST')")
     @Operation(summary = "Listar repuestos bajo umbral de stock")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Listado consultado exitosamente"),
@@ -68,7 +68,7 @@ public class SpareController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER','RECEPTIONIST')")
     @Operation(summary = "Consultar repuesto por ID")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Repuesto encontrado"),
@@ -83,7 +83,7 @@ public class SpareController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER')")
     @Operation(summary = "Actualizar repuesto")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Repuesto actualizado"),
@@ -101,7 +101,7 @@ public class SpareController {
     }
 
     @PatchMapping("/{id}/purchase-price")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER')")
     @Operation(summary = "Actualizar precio de compra")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Precio actualizado"),

@@ -60,7 +60,7 @@ class InventoryTransactionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "WAREHOUSE_WORKER")
     @DisplayName("POST /api/v1/inventory/purchases retorna 201")
     void shouldRegisterPurchase() throws Exception {
         CreatePurchaseTransactionDTO request = new CreatePurchaseTransactionDTO("Proveedor", List.of(new CreatePurchaseItemDTO(1L, 2, new BigDecimal("100"))));
@@ -74,7 +74,7 @@ class InventoryTransactionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "WAREHOUSE_WORKER")
     @DisplayName("POST /api/v1/inventory/purchases retorna 400 para body inválido")
     void shouldReturn400WhenPurchaseBodyInvalid() throws Exception {
         mockMvc.perform(post("/api/v1/inventory/purchases")
@@ -86,7 +86,7 @@ class InventoryTransactionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "WAREHOUSE_WORKER")
     @DisplayName("GET /api/v1/inventory/purchases retorna lista")
     void shouldListPurchases() throws Exception {
         when(inventoryTransactionService.getPurchases()).thenReturn(List.of(purchaseResponse(1L), purchaseResponse(2L)));
@@ -97,7 +97,7 @@ class InventoryTransactionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "WAREHOUSE_WORKER")
     @DisplayName("GET /api/v1/inventory/purchases/{id} retorna detalle")
     void shouldGetPurchaseById() throws Exception {
         when(inventoryTransactionService.getPurchaseById(8L)).thenReturn(purchaseResponse(8L));
@@ -108,7 +108,7 @@ class InventoryTransactionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("POST /api/v1/inventory/sales retorna 201")
     void shouldRegisterSale() throws Exception {
         CreateSaleTransactionDTO request = new CreateSaleTransactionDTO(null, List.of(new CreateSaleItemDTO(1L, 2)));
@@ -122,7 +122,7 @@ class InventoryTransactionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("GET /api/v1/inventory/sales retorna lista")
     void shouldListSales() throws Exception {
         when(inventoryTransactionService.getSales()).thenReturn(List.of(saleResponse(1L), saleResponse(2L)));
@@ -133,7 +133,7 @@ class InventoryTransactionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("GET /api/v1/inventory/sales/today retorna resumen")
     void shouldGetTodaySalesSummary() throws Exception {
         when(inventoryTransactionService.getTodaySalesSummary()).thenReturn(
@@ -146,7 +146,7 @@ class InventoryTransactionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("GET /api/v1/inventory/sales/{id} retorna detalle")
     void shouldGetSaleById() throws Exception {
         when(inventoryTransactionService.getSaleById(3L)).thenReturn(saleResponse(3L));

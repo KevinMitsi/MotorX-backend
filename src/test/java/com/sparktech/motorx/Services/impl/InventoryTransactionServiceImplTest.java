@@ -90,8 +90,7 @@ class InventoryTransactionServiceImplTest {
     @Test
     @DisplayName("registerPurchase como WAREHOUSE_WORKER permite operación")
     void registerPurchaseAsWarehouseShouldBeAllowed() {
-        UserEntity employeeUser = user(2L, Role.EMPLOYEE);
-        EmployeeEntity employee = employee(employeeUser, EmployeePosition.WAREHOUSE_WORKER);
+        UserEntity employeeUser = user(2L, Role.WAREHOUSE_WORKER);
         Spare spare = spare(11L, "Bujia", 1, new BigDecimal("20"), false);
         CreatePurchaseTransactionDTO dto = new CreatePurchaseTransactionDTO(
                 "Proveedor",
@@ -99,7 +98,6 @@ class InventoryTransactionServiceImplTest {
         );
 
         when(currentUserService.getAuthenticatedUser()).thenReturn(employeeUser);
-        when(employeeRepository.findByUserId(2L)).thenReturn(Optional.of(employee));
         when(spareRepository.findById(11L)).thenReturn(Optional.of(spare));
         when(purchaseRepository.save(any(PurchaseTransaction.class))).thenAnswer(inv -> inv.getArgument(0));
         when(purchaseMapper.toResponseDTO(any(PurchaseTransaction.class))).thenReturn(
@@ -109,31 +107,6 @@ class InventoryTransactionServiceImplTest {
         PurchaseTransactionResponseDTO result = sut.registerPurchase(dto);
 
         assertThat(result.id()).isEqualTo(2L);
-    }
-
-    @Test
-    @DisplayName("registerPurchase falla si empleado no tiene perfil")
-    void registerPurchaseShouldFailWhenEmployeeProfileMissing() {
-        UserEntity employeeUser = user(2L, Role.EMPLOYEE);
-        when(currentUserService.getAuthenticatedUser()).thenReturn(employeeUser);
-        when(employeeRepository.findByUserId(2L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> sut.registerPurchase(new CreatePurchaseTransactionDTO("Proveedor", List.of(new CreatePurchaseItemDTO(1L, 1, BigDecimal.ONE)))))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("no tiene perfil de empleado");
-    }
-
-    @Test
-    @DisplayName("registerPurchase falla si empleado no es de bodega")
-    void registerPurchaseShouldFailWhenPositionNotWarehouse() {
-        UserEntity employeeUser = user(2L, Role.EMPLOYEE);
-        EmployeeEntity employee = employee(employeeUser, EmployeePosition.RECEPCIONISTA);
-        when(currentUserService.getAuthenticatedUser()).thenReturn(employeeUser);
-        when(employeeRepository.findByUserId(2L)).thenReturn(Optional.of(employee));
-
-        assertThatThrownBy(() -> sut.registerPurchase(new CreatePurchaseTransactionDTO("Proveedor", List.of(new CreatePurchaseItemDTO(1L, 1, BigDecimal.ONE)))))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("bodega");
     }
 
     @Test
@@ -151,13 +124,9 @@ class InventoryTransactionServiceImplTest {
     @Test
     @DisplayName("getPurchases valida permisos y mapea resultados")
     void getPurchasesShouldValidateAndMap() {
-        UserEntity employeeUser = user(2L, Role.EMPLOYEE);
-        EmployeeEntity employee = employee(employeeUser, EmployeePosition.WAREHOUSE_WORKER);
         PurchaseTransaction tx = new PurchaseTransaction();
         tx.setId(88L);
 
-        when(currentUserService.getAuthenticatedUser()).thenReturn(employeeUser);
-        when(employeeRepository.findByUserId(2L)).thenReturn(Optional.of(employee));
         when(purchaseRepository.findAllByOrderByTransactionDateDesc()).thenReturn(List.of(tx));
         when(purchaseMapper.toResponseDTO(tx)).thenReturn(
                 new PurchaseTransactionResponseDTO(88L, "Proveedor", LocalDateTime.now(), 2L, "employee@test.com", BigDecimal.TEN, List.of())
@@ -172,8 +141,6 @@ class InventoryTransactionServiceImplTest {
     @Test
     @DisplayName("getPurchaseById retorna IllegalArgumentException cuando no existe")
     void getPurchaseByIdShouldThrowWhenMissing() {
-        UserEntity admin = user(1L, Role.ADMIN);
-        when(currentUserService.getAuthenticatedUser()).thenReturn(admin);
         when(purchaseRepository.findById(44L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> sut.getPurchaseById(44L)).isInstanceOf(IllegalArgumentException.class);
@@ -285,29 +252,29 @@ class InventoryTransactionServiceImplTest {
     }
 
     @Test
-    @DisplayName("registerSale valida rol recepcionista para empleado")
-    void registerSaleShouldFailWhenEmployeeIsNotReceptionist() {
-        UserEntity employeeUser = user(2L, Role.EMPLOYEE);
-        EmployeeEntity employee = employee(employeeUser, EmployeePosition.WAREHOUSE_WORKER);
+    @DisplayName("registerSale permite operación para rol RECEPTIONIST")
+    void registerSaleShouldAllowReceptionistRole() {
+        UserEntity employeeUser = user(2L, Role.RECEPTIONIST);
+        Spare spare = spare(30L, "Filtro", 5, new BigDecimal("50"), false);
 
         when(currentUserService.getAuthenticatedUser()).thenReturn(employeeUser);
-        when(employeeRepository.findByUserId(2L)).thenReturn(Optional.of(employee));
+        when(spareRepository.findById(30L)).thenReturn(Optional.of(spare));
+        when(saleRepository.save(any(SaleTransaction.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(saleMapper.toResponseDTO(any(SaleTransaction.class))).thenReturn(
+                new SaleTransactionResponseDTO(11L, LocalDateTime.now(), null, 2L, "employee@test.com", BigDecimal.ONE, List.of())
+        );
 
-        assertThatThrownBy(() -> sut.registerSale(new CreateSaleTransactionDTO(null, List.of(new CreateSaleItemDTO(30L, 1)))))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("recepcion");
+        SaleTransactionResponseDTO result = sut.registerSale(new CreateSaleTransactionDTO(null, List.of(new CreateSaleItemDTO(30L, 1))));
+
+        assertThat(result.id()).isEqualTo(11L);
     }
 
     @Test
     @DisplayName("getSales permite warehouse_worker y receptionist")
     void getSalesShouldAllowWarehouseAndReceptionist() {
-        UserEntity employeeUser = user(2L, Role.EMPLOYEE);
-        EmployeeEntity employee = employee(employeeUser, EmployeePosition.WAREHOUSE_WORKER);
         SaleTransaction tx = new SaleTransaction();
         tx.setId(90L);
 
-        when(currentUserService.getAuthenticatedUser()).thenReturn(employeeUser);
-        when(employeeRepository.findByUserId(2L)).thenReturn(Optional.of(employee));
         when(saleRepository.findAllByOrderByTransactionDateDesc()).thenReturn(List.of(tx));
         when(saleMapper.toResponseDTO(tx)).thenReturn(
                 new SaleTransactionResponseDTO(90L, LocalDateTime.now(), null, 2L, "employee@test.com", BigDecimal.ONE, List.of())
@@ -319,36 +286,8 @@ class InventoryTransactionServiceImplTest {
     }
 
     @Test
-    @DisplayName("getSales rechaza empleado sin permisos de visualización")
-    void getSalesShouldRejectUnauthorizedEmployee() {
-        UserEntity employeeUser = user(2L, Role.EMPLOYEE);
-        EmployeeEntity employee = employee(employeeUser, EmployeePosition.MECANICO);
-
-        when(currentUserService.getAuthenticatedUser()).thenReturn(employeeUser);
-        when(employeeRepository.findByUserId(2L)).thenReturn(Optional.of(employee));
-
-        assertThatThrownBy(() -> sut.getSales())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("ver ventas");
-    }
-
-    @Test
-    @DisplayName("getSaleById exige permisos de recepción/admin")
-    void getSaleByIdShouldValidateRoleAndThrowIfMissing() {
-        UserEntity employeeUser = user(2L, Role.EMPLOYEE);
-        EmployeeEntity employee = employee(employeeUser, EmployeePosition.MECANICO);
-
-        when(currentUserService.getAuthenticatedUser()).thenReturn(employeeUser);
-        when(employeeRepository.findByUserId(2L)).thenReturn(Optional.of(employee));
-
-        assertThatThrownBy(() -> sut.getSaleById(3L)).isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
     @DisplayName("getSaleById lanza IllegalArgumentException si no existe")
     void getSaleByIdShouldThrowWhenMissing() {
-        UserEntity admin = user(1L, Role.ADMIN);
-        when(currentUserService.getAuthenticatedUser()).thenReturn(admin);
         when(saleRepository.findById(3L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> sut.getSaleById(3L)).isInstanceOf(IllegalArgumentException.class);
@@ -357,12 +296,9 @@ class InventoryTransactionServiceImplTest {
     @Test
     @DisplayName("getTodaySalesSummary suma montos y cuenta transacciones")
     void getTodaySalesSummaryShouldAggregateSales() {
-        UserEntity admin = user(1L, Role.ADMIN);
-
         SaleTransaction tx1 = new SaleTransaction();
         SaleTransaction tx2 = new SaleTransaction();
 
-        when(currentUserService.getAuthenticatedUser()).thenReturn(admin);
         when(saleRepository.findByDateRange(any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(List.of(tx1, tx2));
         when(saleMapper.toResponseDTO(tx1)).thenReturn(new SaleTransactionResponseDTO(1L, LocalDateTime.now(), null, 1L, "a@a.com", new BigDecimal("100"), List.of()));
         when(saleMapper.toResponseDTO(tx2)).thenReturn(new SaleTransactionResponseDTO(2L, LocalDateTime.now(), null, 1L, "a@a.com", new BigDecimal("40"), List.of()));
@@ -382,13 +318,6 @@ class InventoryTransactionServiceImplTest {
         return user;
     }
 
-    private EmployeeEntity employee(UserEntity user, EmployeePosition position) {
-        EmployeeEntity employee = new EmployeeEntity();
-        employee.setId(200L);
-        employee.setUser(user);
-        employee.setPosition(position);
-        return employee;
-    }
 
     private Spare spare(Long id, String name, Integer qty, BigDecimal purchasePrice, Boolean isOil) {
         Spare spare = new Spare();

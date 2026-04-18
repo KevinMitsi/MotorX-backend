@@ -55,7 +55,7 @@ class SpareControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "WAREHOUSE_WORKER")
     @DisplayName("POST /api/v1/spares retorna 201")
     void shouldCreateSpare() throws Exception {
         CreateSpareDTO request = new CreateSpareDTO("Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("100"), false, "Prov", 3, 2, "01-01-01-01");
@@ -69,7 +69,7 @@ class SpareControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "WAREHOUSE_WORKER")
     @DisplayName("POST /api/v1/spares retorna 400 con body inválido")
     void shouldReturn400WhenCreateRequestInvalid() throws Exception {
         mockMvc.perform(post("/api/v1/spares")
@@ -81,7 +81,7 @@ class SpareControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("GET /api/v1/spares retorna lista")
     void shouldListSpares() throws Exception {
         when(spareService.getAllSpares()).thenReturn(List.of(response(1L), response(2L)));
@@ -92,7 +92,7 @@ class SpareControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("GET /api/v1/spares/{id} retorna item")
     void shouldGetSpareById() throws Exception {
         when(spareService.getSpareById(10L)).thenReturn(response(10L));
@@ -103,7 +103,7 @@ class SpareControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "WAREHOUSE_WORKER")
     @DisplayName("PUT /api/v1/spares/{id} actualiza")
     void shouldUpdateSpare() throws Exception {
         UpdateSpareDTO request = new UpdateSpareDTO("Filtro", "AKT", "SAV-1", "REP-1", new BigDecimal("110"), false, "Prov", 4, 3, "01-01-01-01");
@@ -117,7 +117,7 @@ class SpareControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "WAREHOUSE_WORKER")
     @DisplayName("PATCH /api/v1/spares/{id}/purchase-price actualiza precio")
     void shouldUpdatePurchasePrice() throws Exception {
         UpdateSparePurchasePriceDTO request = new UpdateSparePurchasePriceDTO(new BigDecimal("120"));
@@ -131,7 +131,7 @@ class SpareControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("DELETE /api/v1/spares/{id} retorna 204")
     void shouldDeleteSpare() throws Exception {
         doNothing().when(spareService).deleteSpare(9L);
@@ -143,7 +143,7 @@ class SpareControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("GET /api/v1/spares/below-threshold retorna lista")
     void shouldGetBelowThreshold() throws Exception {
         when(spareService.getSparesBelowThreshold()).thenReturn(List.of(response(2L)));

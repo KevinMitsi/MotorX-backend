@@ -8,8 +8,6 @@ import com.sparktech.motorx.dto.inventory.SpareResponseDTO;
 import com.sparktech.motorx.dto.inventory.UpdateSpareDTO;
 import com.sparktech.motorx.dto.inventory.UpdateSparePurchasePriceDTO;
 import com.sparktech.motorx.dto.notification.CreateNotificationDTO;
-import com.sparktech.motorx.entity.EmployeeEntity;
-import com.sparktech.motorx.entity.EmployeePosition;
 import com.sparktech.motorx.entity.LogActionType;
 import com.sparktech.motorx.entity.Role;
 import com.sparktech.motorx.entity.Spare;
@@ -18,8 +16,8 @@ import com.sparktech.motorx.exception.DuplicateSpareCodeException;
 import com.sparktech.motorx.exception.InvalidWarehouseLocationException;
 import com.sparktech.motorx.exception.SpareNotFoundException;
 import com.sparktech.motorx.mapper.SpareMapper;
-import com.sparktech.motorx.repository.JpaEmployeeRepository;
 import com.sparktech.motorx.repository.JpaSpareRepository;
+import com.sparktech.motorx.repository.JpaUserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,7 +49,7 @@ class SpareServiceImplTest {
     @Mock
     private ILogService logService;
     @Mock
-    private JpaEmployeeRepository employeeRepository;
+    private JpaUserRepository userRepository;
     @Mock
     private INotificationService notificationService;
 
@@ -270,15 +268,11 @@ class SpareServiceImplTest {
 
         UserEntity warehouseUser = new UserEntity();
         warehouseUser.setId(501L);
-        warehouseUser.setRole(Role.EMPLOYEE);
-
-        EmployeeEntity employee = new EmployeeEntity();
-        employee.setId(900L);
-        employee.setPosition(EmployeePosition.WAREHOUSE_WORKER);
-        employee.setUser(warehouseUser);
+        warehouseUser.setRole(Role.WAREHOUSE_WORKER);
+        warehouseUser.setEnabled(true);
 
         when(spareRepository.findById(70L)).thenReturn(Optional.of(spare));
-        when(employeeRepository.findByPosition(EmployeePosition.WAREHOUSE_WORKER)).thenReturn(List.of(employee));
+        when(userRepository.findByRole(Role.WAREHOUSE_WORKER)).thenReturn(List.of(warehouseUser));
 
         long notified = sut.notifyWarehouseWorkersToRestock(70L);
 

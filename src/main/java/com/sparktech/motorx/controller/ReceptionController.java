@@ -29,7 +29,7 @@ public class ReceptionController {
     private final IReceptionService receptionService;
 
     @PostMapping("/initiate/{appointmentId}")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST')")
     @Operation(summary = "Iniciar recepcion y enviar codigo")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Recepcion iniciada correctamente"),
@@ -45,7 +45,7 @@ public class ReceptionController {
     }
 
     @PostMapping("/confirm")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTIONIST')")
     @Operation(summary = "Confirmar recepcion con placa y codigo")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Recepcion confirmada correctamente"),

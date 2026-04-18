@@ -27,13 +27,10 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class InventoryTransactionServiceImpl implements IInventoryTransactionService {
-    private static final String EMPLOYEE_PROFILE_MISSING = "El usuario no tiene perfil de empleado.";
-
     private final JpaPurchaseTransactionRepository purchaseRepository;
     private final JpaSaleTransactionRepository saleRepository;
     private final JpaSpareRepository spareRepository;
     private final JpaAppointmentRepository appointmentRepository;
-    private final JpaEmployeeRepository employeeRepository;
     private final JpaUserRepository userRepository;
     private final ICurrentUserService currentUserService;
     private final ILogService logService;
@@ -46,8 +43,6 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
     public PurchaseTransactionResponseDTO registerPurchase(CreatePurchaseTransactionDTO dto) {
         UserEntity currentUser = currentUserService.getAuthenticatedUser();
         try {
-            validateWarehouseOrAdmin(currentUser);
-
             PurchaseTransaction transaction = PurchaseTransaction.builder()
                     .supplier(dto.supplier())
                     .createdBy(currentUser)
@@ -95,16 +90,12 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseTransactionResponseDTO> getPurchases() {
-        UserEntity currentUser = currentUserService.getAuthenticatedUser();
-        validateWarehouseOrAdmin(currentUser);
         return purchaseRepository.findAllByOrderByTransactionDateDesc().stream().map(purchaseMapper::toResponseDTO).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public PurchaseTransactionResponseDTO getPurchaseById(Long id) {
-        UserEntity currentUser = currentUserService.getAuthenticatedUser();
-        validateWarehouseOrAdmin(currentUser);
         PurchaseTransaction tx = purchaseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("No se encontro la compra con ID: " + id));
         return purchaseMapper.toResponseDTO(tx);
@@ -115,8 +106,6 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
     public SaleTransactionResponseDTO registerSale(CreateSaleTransactionDTO dto) {
         UserEntity currentUser = currentUserService.getAuthenticatedUser();
         try {
-            validateReceptionistOrAdmin(currentUser);
-
             AppointmentEntity appointment = null;
             if (dto.appointmentId() != null) {
                 appointment = appointmentRepository.findById(dto.appointmentId())
@@ -179,16 +168,12 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
     @Override
     @Transactional(readOnly = true)
     public List<SaleTransactionResponseDTO> getSales() {
-        UserEntity currentUser = currentUserService.getAuthenticatedUser();
-        validateSalesViewer(currentUser);
         return saleRepository.findAllByOrderByTransactionDateDesc().stream().map(saleMapper::toResponseDTO).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public SaleTransactionResponseDTO getSaleById(Long id) {
-        UserEntity currentUser = currentUserService.getAuthenticatedUser();
-        validateReceptionistOrAdmin(currentUser);
         SaleTransaction tx = saleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("No se encontro la venta con ID: " + id));
         return saleMapper.toResponseDTO(tx);
@@ -197,9 +182,6 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
     @Override
     @Transactional(readOnly = true)
     public DailySalesSummaryDTO getTodaySalesSummary() {
-        UserEntity currentUser = currentUserService.getAuthenticatedUser();
-        validateReceptionistOrAdmin(currentUser);
-
         LocalDate today = LocalDate.now();
         LocalDateTime start = LocalDateTime.of(today, LocalTime.MIN);
         LocalDateTime end = LocalDateTime.of(today.plusDays(1), LocalTime.MIN);
@@ -214,39 +196,6 @@ public class InventoryTransactionServiceImpl implements IInventoryTransactionSer
         return new DailySalesSummaryDTO(today, total, sales.size(), sales);
     }
 
-    private void validateWarehouseOrAdmin(UserEntity user) {
-        if (user.getRole() == Role.ADMIN) {
-            return;
-        }
-        EmployeeEntity employee = employeeRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new IllegalStateException(EMPLOYEE_PROFILE_MISSING));
-        if (employee.getPosition() != EmployeePosition.WAREHOUSE_WORKER) {
-            throw new IllegalStateException("No tienes permisos para operaciones de bodega.");
-        }
-    }
-
-    private void validateReceptionistOrAdmin(UserEntity user) {
-        if (user.getRole() == Role.ADMIN) {
-            return;
-        }
-        EmployeeEntity employee = employeeRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new IllegalStateException(EMPLOYEE_PROFILE_MISSING));
-        if (employee.getPosition() != EmployeePosition.RECEPCIONISTA) {
-            throw new IllegalStateException("Solo recepcion o admin puede registrar ventas.");
-        }
-    }
-
-    private void validateSalesViewer(UserEntity user) {
-        if (user.getRole() == Role.ADMIN) {
-            return;
-        }
-        EmployeeEntity employee = employeeRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new IllegalStateException(EMPLOYEE_PROFILE_MISSING));
-        if (employee.getPosition() != EmployeePosition.RECEPCIONISTA
-                && employee.getPosition() != EmployeePosition.WAREHOUSE_WORKER) {
-            throw new IllegalStateException("No tienes permisos para ver ventas.");
-        }
-    }
 
     private void notifyAdminsWhenBelowThreshold(Spare spare) {
         if (spare.getStockThreshold() == null || spare.getStockThreshold() <= 0) {

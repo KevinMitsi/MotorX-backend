@@ -2,6 +2,8 @@ package com.sparktech.motorx.entity;
 
 public enum Role {
     CLIENT,
-    EMPLOYEE,
+    WAREHOUSE_WORKER,
+    TECHNICIAN,
+    RECEPTIONIST,
     ADMIN
 }
