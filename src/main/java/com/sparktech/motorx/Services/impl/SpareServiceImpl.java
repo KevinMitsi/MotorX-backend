@@ -6,7 +6,6 @@ import com.sparktech.motorx.Services.INotificationService;
 import com.sparktech.motorx.Services.ISpareService;
 import com.sparktech.motorx.dto.notification.CreateNotificationDTO;
 import com.sparktech.motorx.dto.inventory.*;
-import com.sparktech.motorx.entity.EmployeePosition;
 import com.sparktech.motorx.entity.LogActionType;
 import com.sparktech.motorx.entity.LogServiceName;
 import com.sparktech.motorx.entity.NotificationUrgency;
@@ -17,8 +16,8 @@ import com.sparktech.motorx.exception.DuplicateSpareCodeException;
 import com.sparktech.motorx.exception.InvalidWarehouseLocationException;
 import com.sparktech.motorx.exception.SpareNotFoundException;
 import com.sparktech.motorx.mapper.SpareMapper;
-import com.sparktech.motorx.repository.JpaEmployeeRepository;
 import com.sparktech.motorx.repository.JpaSpareRepository;
+import com.sparktech.motorx.repository.JpaUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +36,7 @@ public class SpareServiceImpl implements ISpareService {
     private final SpareMapper spareMapper;
     private final ICurrentUserService currentUserService;
     private final ILogService logService;
-    private final JpaEmployeeRepository employeeRepository;
+    private final JpaUserRepository userRepository;
     private final INotificationService notificationService;
 
     @Override
@@ -182,10 +181,9 @@ public class SpareServiceImpl implements ISpareService {
     public long notifyWarehouseWorkersToRestock(Long spareId) {
         Spare spare = findSpareOrThrow(spareId);
 
-        List<UserEntity> warehouseUsers = employeeRepository.findByPosition(EmployeePosition.WAREHOUSE_WORKER)
+        List<UserEntity> warehouseUsers = userRepository.findByRole(Role.WAREHOUSE_WORKER)
                 .stream()
-                .map(com.sparktech.motorx.entity.EmployeeEntity::getUser)
-                .filter(user -> user != null && user.getRole() == Role.EMPLOYEE)
+                .filter(UserEntity::isEnabled)
                 .toList();
 
         for (UserEntity warehouseUser : warehouseUsers) {

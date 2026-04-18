@@ -35,7 +35,7 @@ public class AdminEmployeeController {
     @PostMapping
     @Operation(
             summary = "Crear empleado",
-            description = "Crea un empleado y su usuario en la aplicación con rol EMPLOYEE. " +
+            description = "Crea un empleado y su usuario en la aplicación con rol derivado del cargo. " +
                     "El empleado queda habilitado y disponible (estado AVAILABLE) desde el inicio."
     )
     @ApiResponses(value = {

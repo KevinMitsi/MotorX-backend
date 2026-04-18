@@ -7,6 +7,7 @@ import com.sparktech.motorx.dto.employee.UpdateEmployeeRequestDTO;
 import com.sparktech.motorx.dto.vehicle.TransferVehicleOwnershipRequestDTO;
 import com.sparktech.motorx.dto.vehicle.VehicleResponseDTO;
 import com.sparktech.motorx.entity.EmployeeEntity;
+import com.sparktech.motorx.entity.EmployeePosition;
 import com.sparktech.motorx.entity.EmployeeState;
 import com.sparktech.motorx.entity.Role;
 import com.sparktech.motorx.entity.UserEntity;
@@ -54,14 +55,14 @@ public class EmployeeServiceImpl implements IEmployeeService {
                     "Ya existe un usuario registrado con el DNI: " + request.user().dni());
         }
 
-        // Crear el usuario con rol EMPLOYEE
+        // Crear el usuario con el rol derivado de su posición operativa.
         UserEntity user = new UserEntity();
         user.setName(request.user().name());
         user.setDni(request.user().dni());
         user.setEmail(request.user().email());
         user.setPassword(passwordEncoder.encode(request.user().password()));
         user.setPhone(request.user().phone());
-        user.setRole(Role.EMPLOYEE);
+        user.setRole(mapRoleFromPosition(request.position()));
         user.setEnabled(true);
         user.setAccountLocked(false);
         UserEntity savedUser = userRepository.save(user);
@@ -100,8 +101,17 @@ public class EmployeeServiceImpl implements IEmployeeService {
 
         employee.setPosition(request.position());
         employee.setState(request.state());
+        employee.getUser().setRole(mapRoleFromPosition(request.position()));
 
         return employeeMapper.toResponseDTO(employeeRepository.save(employee));
+    }
+
+    private Role mapRoleFromPosition(EmployeePosition position) {
+        return switch (position) {
+            case WAREHOUSE_WORKER -> Role.WAREHOUSE_WORKER;
+            case MECANICO -> Role.TECHNICIAN;
+            case RECEPCIONISTA -> Role.RECEPTIONIST;
+        };
     }
 
     @Override

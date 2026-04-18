@@ -14,7 +14,7 @@ import java.util.List;
 public interface IEmployeeService {
 
     /**
-     * Crea un empleado junto con su usuario en la aplicación (rol EMPLOYEE).
+     * Crea un empleado junto con su usuario en la aplicación (rol derivado del cargo).
      */
     EmployeeResponseDTO createEmployee(CreateEmployeeRequestDTO request);
 

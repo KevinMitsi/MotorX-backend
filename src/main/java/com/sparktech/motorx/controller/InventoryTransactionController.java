@@ -31,7 +31,7 @@ public class InventoryTransactionController {
     private final IInventoryTransactionService inventoryTransactionService;
 
     @PostMapping("/purchases")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER')")
     @Operation(summary = "Registrar compra")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Compra registrada"),
@@ -45,7 +45,7 @@ public class InventoryTransactionController {
     }
 
     @GetMapping("/purchases")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER')")
     @Operation(summary = "Listar compras")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Listado consultado"),
@@ -57,7 +57,7 @@ public class InventoryTransactionController {
     }
 
     @GetMapping("/purchases/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER')")
     @Operation(summary = "Detalle de compra")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Transaccion encontrada"),
@@ -72,7 +72,7 @@ public class InventoryTransactionController {
     }
 
     @PostMapping("/sales")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER','RECEPTIONIST')")
     @Operation(summary = "Registrar venta")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Venta registrada"),
@@ -86,7 +86,7 @@ public class InventoryTransactionController {
     }
 
     @GetMapping("/sales")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER','RECEPTIONIST')")
     @Operation(summary = "Listar ventas")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Listado consultado"),
@@ -98,7 +98,7 @@ public class InventoryTransactionController {
     }
 
     @GetMapping("/sales/today")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER','RECEPTIONIST')")
     @Operation(summary = "Resumen de ventas del dia")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Resumen calculado"),
@@ -110,7 +110,7 @@ public class InventoryTransactionController {
     }
 
     @GetMapping("/sales/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER','RECEPTIONIST')")
     @Operation(summary = "Detalle de venta")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Transaccion encontrada"),

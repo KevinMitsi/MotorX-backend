@@ -55,7 +55,7 @@ class ReceptionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("POST /api/v1/reception/initiate/{appointmentId} retorna 200")
     void shouldInitiateReception() throws Exception {
         when(receptionService.initiateReception(15L)).thenReturn(response(15L, AppointmentStatus.AWAITING_CONFIRMATION));
@@ -67,7 +67,7 @@ class ReceptionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("POST /api/v1/reception/confirm retorna 200")
     void shouldConfirmReception() throws Exception {
         ConfirmReceptionDTO request = new ConfirmReceptionDTO("ABC123", "1234");
@@ -81,7 +81,7 @@ class ReceptionControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("POST /api/v1/reception/confirm retorna 400 si código inválido")
     void shouldReturn400WhenConfirmBodyInvalid() throws Exception {
         ConfirmReceptionDTO request = new ConfirmReceptionDTO("ABC123", "12");
