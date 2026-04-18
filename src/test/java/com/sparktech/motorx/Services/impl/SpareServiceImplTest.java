@@ -149,6 +149,31 @@ class SpareServiceImplTest {
     }
 
     @Test
+    @DisplayName("searchSpares aplica filtros opcionales de nombre y SAV")
+    void searchSparesShouldApplyOptionalFilters() {
+        Spare s1 = spare(false, new BigDecimal("100"), 1);
+        s1.setId(90L);
+        when(spareRepository.searchByNameAndSavCode("Filtro", "SAV-9")).thenReturn(List.of(s1));
+        when(spareMapper.toResponseDTO(eq(s1), any())).thenAnswer(inv -> response(inv.getArgument(0), inv.getArgument(1)));
+
+        List<SpareResponseDTO> result = sut.searchSpares("Filtro", "SAV-9");
+
+        assertThat(result).hasSize(1);
+        verify(spareRepository).searchByNameAndSavCode("Filtro", "SAV-9");
+    }
+
+    @Test
+    @DisplayName("searchSpares normaliza filtros vacios como null")
+    void searchSparesShouldNormalizeBlankFilters() {
+        when(spareRepository.searchByNameAndSavCode(null, null)).thenReturn(List.of());
+
+        List<SpareResponseDTO> result = sut.searchSpares("   ", "");
+
+        assertThat(result).isEmpty();
+        verify(spareRepository).searchByNameAndSavCode(null, null);
+    }
+
+    @Test
     @DisplayName("getSpareById lanza SpareNotFoundException cuando no existe")
     void getSpareByIdShouldThrowWhenMissing() {
         when(spareRepository.findById(99L)).thenReturn(Optional.empty());

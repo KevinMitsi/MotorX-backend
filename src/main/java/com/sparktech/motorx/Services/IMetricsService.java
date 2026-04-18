@@ -2,6 +2,7 @@ package com.sparktech.motorx.Services;
 
 import com.sparktech.motorx.dto.metrics.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface IMetricsService {
@@ -27,5 +28,13 @@ public interface IMetricsService {
     AppointmentsMetricsDTO getAppointmentsMetrics();
 
     MetricsSummaryDTO getSummaryMetrics();
+
+    List<TopSellingSpareMetricDTO> getTopSellingSpares(int limit);
+
+    InventoryProfitMetricsDTO getInventoryProfitMetrics(LocalDate startDate, LocalDate endDate);
+
+    List<StagnantSpareMetricDTO> getStagnantSpares(int daysWithoutSales);
+
+    InventoryThresholdMetricsDTO getInventoryThresholdMetrics();
 }
 

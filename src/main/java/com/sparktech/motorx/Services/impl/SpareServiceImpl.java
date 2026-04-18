@@ -78,6 +78,17 @@ public class SpareServiceImpl implements ISpareService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<SpareResponseDTO> searchSpares(String name, String savCode) {
+        String normalizedName = normalizeFilter(name);
+        String normalizedSavCode = normalizeFilter(savCode);
+        return spareRepository.searchByNameAndSavCode(normalizedName, normalizedSavCode)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<SpareResponseDTO> getSparesBelowThreshold() {
         return spareRepository.findLowStockSpares()
                 .stream()
@@ -225,6 +236,14 @@ public class SpareServiceImpl implements ISpareService {
         if (location == null || !WAREHOUSE_PATTERN.matcher(location).matches()) {
             throw new InvalidWarehouseLocationException(location);
         }
+    }
+
+    private String normalizeFilter(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private SpareResponseDTO toResponse(Spare spare) {

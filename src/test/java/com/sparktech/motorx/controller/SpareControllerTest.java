@@ -93,6 +93,23 @@ class SpareControllerTest {
 
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
+    @DisplayName("GET /api/v1/spares con filtros delega busqueda por nombre y SAV")
+    void shouldSearchSparesByOptionalFilters() throws Exception {
+        when(spareService.searchSpares("filtro", "SAV-1")).thenReturn(List.of(response(1L)));
+
+        mockMvc.perform(get("/api/v1/spares")
+                        .param("name", "filtro")
+                        .param("savCode", "SAV-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(1)));
+
+        verify(spareService).searchSpares("filtro", "SAV-1");
+        verify(spareService, never()).getAllSpares();
+    }
+
+    @Test
+    @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("GET /api/v1/spares/{id} retorna item")
     void shouldGetSpareById() throws Exception {
         when(spareService.getSpareById(10L)).thenReturn(response(10L));

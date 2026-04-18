@@ -18,6 +18,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.hamcrest.Matchers.*;
@@ -120,6 +122,74 @@ class AdminMetricsControllerTest {
                 .andExpect(jsonPath("$.appointments.totalAppointmentsInDB", is(1)));
 
         verify(metricsService).getSummaryMetrics();
+    }
+
+    @Test
+    @DisplayName("GET /inventory/top-selling retorna ranking de repuestos")
+    void shouldGetTopSellingSpares() throws Exception {
+        when(metricsService.getTopSellingSpares(5)).thenReturn(List.of(
+                new TopSellingSpareMetricDTO(1L, "Filtro", "SAV-1", 18)
+        ));
+
+        mockMvc.perform(get("/api/v1/admin/metrics/inventory/top-selling").param("limit", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].spareId", is(1)))
+                .andExpect(jsonPath("$[0].unitsSold", is(18)));
+
+        verify(metricsService).getTopSellingSpares(5);
+    }
+
+    @Test
+    @DisplayName("GET /inventory/profit retorna ventas y ganancia por fechas")
+    void shouldGetInventoryProfitMetrics() throws Exception {
+        when(metricsService.getInventoryProfitMetrics(LocalDate.parse("2026-01-01"), LocalDate.parse("2026-01-31")))
+                .thenReturn(new InventoryProfitMetricsDTO(
+                        LocalDate.parse("2026-01-01"),
+                        LocalDate.parse("2026-01-31"),
+                        12,
+                        new BigDecimal("1620.00"),
+                        new BigDecimal("420.00")
+                ));
+
+        mockMvc.perform(get("/api/v1/admin/metrics/inventory/profit")
+                        .param("startDate", "2026-01-01")
+                        .param("endDate", "2026-01-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalUnitsSold", is(12)))
+                .andExpect(jsonPath("$.grossSalesAmount", is(1620.00)))
+                .andExpect(jsonPath("$.estimatedProfitAmount", is(420.00)));
+    }
+
+    @Test
+    @DisplayName("GET /inventory/stagnant retorna repuestos estancados")
+    void shouldGetStagnantSpares() throws Exception {
+        when(metricsService.getStagnantSpares(90)).thenReturn(List.of(
+                new StagnantSpareMetricDTO(9L, "Kit arrastre", "SAV-9", 6, null, null, true)
+        ));
+
+        mockMvc.perform(get("/api/v1/admin/metrics/inventory/stagnant").param("daysWithoutSales", "90"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].spareId", is(9)))
+                .andExpect(jsonPath("$[0].neverSold", is(true)));
+
+        verify(metricsService).getStagnantSpares(90);
+    }
+
+    @Test
+    @DisplayName("GET /inventory/below-threshold-percentage retorna porcentaje")
+    void shouldGetInventoryThresholdPercentage() throws Exception {
+        when(metricsService.getInventoryThresholdMetrics()).thenReturn(
+                new InventoryThresholdMetricsDTO(3, 10, 30.0)
+        );
+
+        mockMvc.perform(get("/api/v1/admin/metrics/inventory/below-threshold-percentage"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sparesBelowThreshold", is(3)))
+                .andExpect(jsonPath("$.belowThresholdPercent", is(30.0)));
+
+        verify(metricsService).getInventoryThresholdMetrics();
     }
 
     @TestConfiguration
