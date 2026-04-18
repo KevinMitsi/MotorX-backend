@@ -45,14 +45,22 @@ public class SpareController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER','RECEPTIONIST')")
-    @Operation(summary = "Listar repuestos")
+    @Operation(summary = "Listar o buscar repuestos")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Listado consultado exitosamente"),
             @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
             @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
-    public ResponseEntity<@NotNull List<SpareResponseDTO>> getAll() {
-        return ResponseEntity.ok(spareService.getAllSpares());
+    public ResponseEntity<@NotNull List<SpareResponseDTO>> getAll(
+            @Parameter(description = "Filtro opcional por nombre (coincidencia parcial)")
+            @RequestParam(required = false) String name,
+            @Parameter(description = "Filtro opcional por codigo SAV (coincidencia parcial)")
+            @RequestParam(required = false) String savCode
+    ) {
+        if (name == null && savCode == null) {
+            return ResponseEntity.ok(spareService.getAllSpares());
+        }
+        return ResponseEntity.ok(spareService.searchSpares(name, savCode));
     }
 
     @GetMapping("/below-threshold")

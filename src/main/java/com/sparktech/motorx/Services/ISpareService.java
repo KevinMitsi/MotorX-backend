@@ -9,6 +9,8 @@ public interface ISpareService {
 
     List<SpareResponseDTO> getAllSpares();
 
+    List<SpareResponseDTO> searchSpares(String name, String savCode);
+
     List<SpareResponseDTO> getSparesBelowThreshold();
 
     SpareResponseDTO getSpareById(Long id);
