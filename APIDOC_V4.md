@@ -10,7 +10,7 @@
 
 ## 1) Resumen de cambios respecto a V3
 
-En esta version se incorporan 2 bloques principales:
+En esta version se incorporan 3 bloques principales:
 
 1. **Auditoria (logs) extendida** para:
    - `SpareServiceImpl`
@@ -21,6 +21,10 @@ En esta version se incorporan 2 bloques principales:
    - `JpaNotificationRepository`
    - `INotificationService` / `NotificationServiceImpl`
    - `NotificationController`
+3. **Nuevo modulo de Chatbot para usuarios autenticados**:
+   - `IChatbotService` / `ChatbotServiceImpl`
+   - `ChatbotController`
+   - `ChatbotRequestDTO` / `ChatbotResponseDTO`
 
 Tambien se completaron anotaciones Swagger en controladores de inventario, repuestos y recepcion.
 
@@ -256,6 +260,49 @@ Notas de calculo:
 - `AdminMetricsControllerTest`, `MetricsServiceImplTest` y `MetricsDtoTest`: cobertura de las nuevas metricas de inventario.
 
 ---
+
+## 12) Modulo Chatbot
+
+Se agrega un modulo de chatbot para usuarios autenticados que permite enviar preguntas abiertas y recibir respuesta desde un webhook externo.
+
+### 12.1 Componentes
+
+- `IChatbotService`
+- `ChatbotServiceImpl`
+- `ChatbotController`
+- `ChatbotRequestDTO`
+- `ChatbotResponseDTO`
+
+### 12.2 Endpoint del Chatbot
+
+Base path: `/api/v1/chatbot`
+
+| Metodo | Endpoint | Descripcion | Acceso |
+|---|---|---|---|
+| `POST` | `/api/v1/chatbot/message` | Envia un mensaje al chatbot y retorna la respuesta | Autenticado |
+
+### 12.3 Contratos DTO
+
+- `ChatbotRequestDTO`
+  - Campo: `message`
+  - Validacion: `@NotBlank` con mensaje `Message cannot be blank`
+- `ChatbotResponseDTO`
+  - Campo: `reply`
+
+### 12.4 Comportamiento del servicio
+
+`ChatbotServiceImpl`:
+
+1. Construye un request HTTP `POST` con `Content-Type: application/json`.
+2. Envia al webhook configurado por propiedad `chatbot.webhook-url`.
+3. Si el webhook responde correctamente y con body, retorna `reply` del webhook.
+4. Si el body viene nulo, retorna mensaje de fallback generico.
+5. Si ocurre excepcion al invocar el webhook, retorna mensaje de fallback por indisponibilidad.
+
+### 12.5 Seguridad
+
+- El endpoint queda protegido por la politica global de seguridad (solicitudes autenticadas).
+- No se exponen endpoints administrativos del chatbot en este modulo.
 
 > `APIDOC_V4.md` funciona como addendum incremental y no reemplaza los documentos anteriores.
 
