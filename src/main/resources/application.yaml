@@ -96,3 +96,9 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
+# ============================================================
+# WEBHOOK
+# ============================================================
+chatbot:
+    webhook-url: ${CHATBOT_WEBHOOK_URL:http://localhost:5678/webhook/webhook-chat}
+
