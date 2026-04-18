@@ -3,6 +3,9 @@ package com.sparktech.motorx.dto.metrics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -74,6 +77,58 @@ class MetricsDtoTest {
         assertThat(dto.security().unauthorizedAttempts401()).isEqualTo(1);
         assertThat(dto.maintainability().jacocoCoverageGatePercent()).isEqualTo(60);
         assertThat(dto.appointments().totalAppointmentsInDB()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("TopSellingSpareMetricDTO expone sus componentes")
+    void shouldCreateTopSellingSpareMetricDto() {
+        TopSellingSpareMetricDTO dto = new TopSellingSpareMetricDTO(2L, "Filtro", "SAV-2", 45);
+
+        assertThat(dto.spareId()).isEqualTo(2L);
+        assertThat(dto.spareName()).isEqualTo("Filtro");
+        assertThat(dto.savCode()).isEqualTo("SAV-2");
+        assertThat(dto.unitsSold()).isEqualTo(45);
+    }
+
+    @Test
+    @DisplayName("InventoryProfitMetricsDTO expone sus componentes")
+    void shouldCreateInventoryProfitMetricsDto() {
+        InventoryProfitMetricsDTO dto = new InventoryProfitMetricsDTO(
+                LocalDate.parse("2026-01-01"),
+                LocalDate.parse("2026-01-31"),
+                12,
+                new BigDecimal("1620.00"),
+                new BigDecimal("420.00")
+        );
+
+        assertThat(dto.startDate()).isEqualTo(LocalDate.parse("2026-01-01"));
+        assertThat(dto.endDate()).isEqualTo(LocalDate.parse("2026-01-31"));
+        assertThat(dto.totalUnitsSold()).isEqualTo(12);
+        assertThat(dto.grossSalesAmount()).isEqualByComparingTo("1620.00");
+        assertThat(dto.estimatedProfitAmount()).isEqualByComparingTo("420.00");
+    }
+
+    @Test
+    @DisplayName("StagnantSpareMetricDTO expone sus componentes")
+    void shouldCreateStagnantSpareMetricDto() {
+        LocalDateTime lastSale = LocalDateTime.parse("2025-12-01T09:00:00");
+        StagnantSpareMetricDTO dto = new StagnantSpareMetricDTO(8L, "Bujia", "SAV-8", 5, lastSale, 140L, false);
+
+        assertThat(dto.spareId()).isEqualTo(8L);
+        assertThat(dto.currentStock()).isEqualTo(5);
+        assertThat(dto.lastSaleDate()).isEqualTo(lastSale);
+        assertThat(dto.daysWithoutSales()).isEqualTo(140L);
+        assertThat(dto.neverSold()).isFalse();
+    }
+
+    @Test
+    @DisplayName("InventoryThresholdMetricsDTO expone sus componentes")
+    void shouldCreateInventoryThresholdMetricsDto() {
+        InventoryThresholdMetricsDTO dto = new InventoryThresholdMetricsDTO(4, 10, 40.0);
+
+        assertThat(dto.sparesBelowThreshold()).isEqualTo(4);
+        assertThat(dto.sparesWithThreshold()).isEqualTo(10);
+        assertThat(dto.belowThresholdPercent()).isEqualTo(40.0);
     }
 }
 

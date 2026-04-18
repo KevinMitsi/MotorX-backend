@@ -224,5 +224,38 @@ En registro de ventas (`InventoryTransactionServiceImpl`), cuando un repuesto qu
 
 ---
 
+## 11) Extension de consultas y metricas de inventario
+
+### 11.1 Busqueda de repuestos (modulo Spares)
+
+Se extiende `GET /api/v1/spares` para soportar filtros opcionales:
+
+- `name` (string, opcional): coincidencia parcial por nombre.
+- `savCode` (string, opcional): coincidencia parcial por codigo SAV.
+
+Si no se envian filtros, el endpoint conserva el comportamiento actual de listado completo.
+
+### 11.2 Nuevas metricas de inventario (modulo Admin Metrics)
+
+Se agregan endpoints bajo `/api/v1/admin/metrics/inventory`:
+
+| Metodo | Endpoint | Descripcion | Parametros | Acceso |
+|---|---|---|---|---|
+| `GET` | `/api/v1/admin/metrics/inventory/top-selling` | Ranking de repuestos mas vendidos | `limit` (opcional, default `10`) | Solo `ADMIN` |
+| `GET` | `/api/v1/admin/metrics/inventory/profit` | Ventas brutas y ganancia estimada por rango de fechas | `startDate`, `endDate` (`yyyy-MM-dd`) | Solo `ADMIN` |
+| `GET` | `/api/v1/admin/metrics/inventory/stagnant` | Repuestos estancados (sin venta reciente o nunca vendidos) | `daysWithoutSales` (opcional, default `60`) | Solo `ADMIN` |
+| `GET` | `/api/v1/admin/metrics/inventory/below-threshold-percentage` | Porcentaje de repuestos por debajo del umbral | Sin parametros | Solo `ADMIN` |
+
+Notas de calculo:
+- Ganancia estimada usa los margenes definidos del dominio: `35%` (repuesto normal) y `25%` (aceites).
+- El porcentaje bajo umbral solo considera repuestos con `stockThreshold > 0`.
+
+### 11.3 Pruebas actualizadas
+
+- `SpareControllerTest` y `SpareServiceImplTest`: cobertura de busqueda opcional por `name`/`savCode`.
+- `AdminMetricsControllerTest`, `MetricsServiceImplTest` y `MetricsDtoTest`: cobertura de las nuevas metricas de inventario.
+
+---
+
 > `APIDOC_V4.md` funciona como addendum incremental y no reemplaza los documentos anteriores.
 

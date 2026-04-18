@@ -3,7 +3,11 @@ package com.sparktech.motorx.Services.impl;
 import com.sparktech.motorx.Services.IMetricsService;
 import com.sparktech.motorx.controller.AdminMetricsController;
 import com.sparktech.motorx.dto.metrics.*;
+import com.sparktech.motorx.entity.SaleTransactionItem;
+import com.sparktech.motorx.entity.Spare;
 import com.sparktech.motorx.repository.JpaAppointmentRepository;
+import com.sparktech.motorx.repository.JpaSaleTransactionRepository;
+import com.sparktech.motorx.repository.JpaSpareRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,16 +15,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import java.math.BigDecimal;
 import java.lang.reflect.Method;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,6 +39,12 @@ class MetricsServiceImplTest {
 
     @Mock
     private JpaAppointmentRepository appointmentRepository;
+
+    @Mock
+    private JpaSaleTransactionRepository saleTransactionRepository;
+
+    @Mock
+    private JpaSpareRepository spareRepository;
 
     @Mock
     private RequestMappingHandlerMapping requestMappingHandlerMapping;
@@ -40,7 +56,7 @@ class MetricsServiceImplTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        sut = new MetricsServiceImpl(appointmentRepository, requestMappingHandlerMapping);
+        sut = new MetricsServiceImpl(appointmentRepository, saleTransactionRepository, spareRepository, requestMappingHandlerMapping);
 
         Map<String, Object> beans = new HashMap<>();
         beans.put("adminMetricsController", new AdminMetricsController(mock(IMetricsService.class)));
@@ -167,6 +183,116 @@ class MetricsServiceImplTest {
         assertThat(summary.security()).isNotNull();
         assertThat(summary.maintainability()).isNotNull();
         assertThat(summary.appointments()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("getTopSellingSpares retorna ranking limitado")
+    void shouldGetTopSellingSpares() {
+        List<Object[]> rows = new java.util.ArrayList<>();
+        rows.add(new Object[]{1L, "Filtro", "SAV-1", 14L});
+        when(saleTransactionRepository.findTopSellingSpares(any(Pageable.class))).thenReturn(rows);
+
+        List<TopSellingSpareMetricDTO> result = sut.getTopSellingSpares(5);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().spareId()).isEqualTo(1L);
+        assertThat(result.getFirst().unitsSold()).isEqualTo(14L);
+    }
+
+    @Test
+    @DisplayName("getTopSellingSpares valida limit mayor a cero")
+    void shouldValidateTopSellingLimit() {
+        assertThatThrownBy(() -> sut.getTopSellingSpares(0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("limit");
+    }
+
+    @Test
+    @DisplayName("getInventoryProfitMetrics calcula venta bruta y ganancia estimada")
+    void shouldCalculateInventoryProfitMetrics() {
+        Spare spare = new Spare();
+        spare.setId(1L);
+        spare.setIsOil(false);
+
+        SaleTransactionItem item = new SaleTransactionItem();
+        item.setSpare(spare);
+        item.setQuantity(2);
+        item.setSalePriceAtMoment(new BigDecimal("135.00"));
+
+        when(saleTransactionRepository.findSoldItemsBetween(
+                LocalDateTime.parse("2026-01-01T00:00:00"),
+                LocalDateTime.parse("2026-02-01T00:00:00")))
+                .thenReturn(List.of(item));
+
+        InventoryProfitMetricsDTO result = sut.getInventoryProfitMetrics(
+                LocalDate.parse("2026-01-01"),
+                LocalDate.parse("2026-01-31")
+        );
+
+        assertThat(result.totalUnitsSold()).isEqualTo(2L);
+        assertThat(result.grossSalesAmount()).isEqualByComparingTo("270.00");
+        assertThat(result.estimatedProfitAmount()).isEqualByComparingTo("70.00");
+    }
+
+    @Test
+    @DisplayName("getInventoryProfitMetrics falla cuando el rango es invalido")
+    void shouldValidateProfitDateRange() {
+        assertThatThrownBy(() -> sut.getInventoryProfitMetrics(
+                LocalDate.parse("2026-02-01"),
+                LocalDate.parse("2026-01-01")
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("inicio");
+    }
+
+    @Test
+    @DisplayName("getStagnantSpares incluye nunca vendidos y antiguos")
+    void shouldGetStagnantSpares() {
+        Spare neverSold = new Spare();
+        neverSold.setId(10L);
+        neverSold.setName("Empaque");
+        neverSold.setSavCode("SAV-10");
+        neverSold.setQuantity(3);
+
+        Spare soldLongAgo = new Spare();
+        soldLongAgo.setId(11L);
+        soldLongAgo.setName("Bujia");
+        soldLongAgo.setSavCode("SAV-11");
+        soldLongAgo.setQuantity(9);
+
+        when(spareRepository.findAll()).thenReturn(List.of(neverSold, soldLongAgo));
+        List<Object[]> rows = new java.util.ArrayList<>();
+        rows.add(new Object[]{11L, LocalDateTime.now().minusDays(120)});
+        when(saleTransactionRepository.findLastSaleDatePerSpare()).thenReturn(rows);
+
+        List<StagnantSpareMetricDTO> result = sut.getStagnantSpares(60);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).anyMatch(StagnantSpareMetricDTO::neverSold);
+        assertThat(result).anyMatch(dto -> !dto.neverSold() && dto.spareId().equals(11L));
+    }
+
+    @Test
+    @DisplayName("getInventoryThresholdMetrics calcula porcentaje bajo umbral")
+    void shouldGetInventoryThresholdMetrics() {
+        Spare below = new Spare();
+        below.setStockThreshold(5);
+        below.setQuantity(3);
+
+        Spare ok = new Spare();
+        ok.setStockThreshold(5);
+        ok.setQuantity(7);
+
+        Spare noThreshold = new Spare();
+        noThreshold.setStockThreshold(0);
+        noThreshold.setQuantity(0);
+
+        when(spareRepository.findAll()).thenReturn(List.of(below, ok, noThreshold));
+
+        InventoryThresholdMetricsDTO result = sut.getInventoryThresholdMetrics();
+
+        assertThat(result.sparesWithThreshold()).isEqualTo(2);
+        assertThat(result.sparesBelowThreshold()).isEqualTo(1);
+        assertThat(result.belowThresholdPercent()).isEqualTo(50.0);
     }
 
     static class DummyController {
