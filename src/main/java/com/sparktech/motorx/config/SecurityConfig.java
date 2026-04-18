@@ -36,7 +36,8 @@ import java.util.List;
 public class SecurityConfig {
 
     public static final String ADMIN_ROLE = "ADMIN";
-    public static final String EMPLOYEE_ROLE = "EMPLOYEE";
+    public static final String WAREHOUSE_ROLE = "WAREHOUSE_WORKER";
+    public static final String RECEPTIONIST_ROLE = "RECEPTIONIST";
     public static final String SPARES_ROUTE = "/api/v1/spares/**";
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -103,18 +104,18 @@ public class SecurityConfig {
 
                         //Admin users
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMIN_ROLE)
-                        .requestMatchers(HttpMethod.POST, "/api/v1/spares").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
-                        .requestMatchers(HttpMethod.GET, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
-                        .requestMatchers(HttpMethod.PUT, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
-                        .requestMatchers(HttpMethod.PATCH, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/spares").hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE)
+                        .requestMatchers(HttpMethod.GET, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE, RECEPTIONIST_ROLE)
+                        .requestMatchers(HttpMethod.PUT, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE)
+                        .requestMatchers(HttpMethod.PATCH, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE)
                         .requestMatchers(HttpMethod.DELETE, SPARES_ROUTE).hasRole(ADMIN_ROLE)
 
-                        .requestMatchers(HttpMethod.POST, "/api/v1/inventory/purchases").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
-                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/purchases/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
-                        .requestMatchers(HttpMethod.POST, "/api/v1/inventory/sales").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
-                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/sales/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/inventory/purchases").hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/purchases/**").hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/inventory/sales").hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE, RECEPTIONIST_ROLE)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/inventory/sales/**").hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE, RECEPTIONIST_ROLE)
 
-                        .requestMatchers("/api/v1/reception/**").hasAnyRole(ADMIN_ROLE, EMPLOYEE_ROLE)
+                        .requestMatchers("/api/v1/reception/**").hasAnyRole(ADMIN_ROLE, RECEPTIONIST_ROLE)
                         .requestMatchers("/api/v1/notifications/**").authenticated()
                         .requestMatchers("/api/v1/user/**").authenticated()
 

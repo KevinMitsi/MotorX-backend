@@ -75,7 +75,7 @@ class EmployeeServiceImplTest {
         e.setId(id);
         e.setPosition(EmployeePosition.MECANICO);
         e.setState(EmployeeState.AVAILABLE);
-        e.setUser(buildUser(id, Role.EMPLOYEE, true));
+        e.setUser(buildUser(id, Role.TECHNICIAN, true));
         return e;
     }
 
@@ -117,7 +117,7 @@ class EmployeeServiceImplTest {
         void givenValidRequest_thenPersistUserAndEmployee() {
             // Arrange
             CreateEmployeeRequestDTO request = buildCreateRequest("nuevo@test.com", "987654321");
-            UserEntity savedUser = buildUser(5L, Role.EMPLOYEE, true);
+            UserEntity savedUser = buildUser(5L, Role.TECHNICIAN, true);
             EmployeeEntity savedEmployee = buildEmployee(10L);
             EmployeeResponseDTO expectedDTO = mock(EmployeeResponseDTO.class);
 
@@ -138,11 +138,11 @@ class EmployeeServiceImplTest {
         }
 
         @Test
-        @DisplayName("El UserEntity persistido tiene rol EMPLOYEE, enabled=true y password encriptada")
+        @DisplayName("El UserEntity persistido tiene rol derivado del cargo, enabled=true y password encriptada")
         void givenValidRequest_thenUserEntityHasCorrectFields() {
             // Arrange
             CreateEmployeeRequestDTO request = buildCreateRequest("nuevo@test.com", "987654321");
-            UserEntity savedUser = buildUser(5L, Role.EMPLOYEE, true);
+            UserEntity savedUser = buildUser(5L, Role.TECHNICIAN, true);
 
             when(userRepository.existsByEmail(any())).thenReturn(false);
             when(userRepository.existsByDni(any())).thenReturn(false);
@@ -157,7 +157,7 @@ class EmployeeServiceImplTest {
             // Assert
             verify(userRepository).save(userCaptor.capture());
             UserEntity captured = userCaptor.getValue();
-            assertThat(captured.getRole()).isEqualTo(Role.EMPLOYEE);
+            assertThat(captured.getRole()).isEqualTo(Role.TECHNICIAN);
             assertThat(captured.isEnabled()).isTrue();
             assertThat(captured.isAccountLocked()).isFalse();
             assertThat(captured.getPassword()).isEqualTo("hashed");
@@ -168,7 +168,7 @@ class EmployeeServiceImplTest {
         void givenValidRequest_thenEmployeeEntityHasCorrectFields() {
             // Arrange
             CreateEmployeeRequestDTO request = buildCreateRequest("nuevo@test.com", "123456789");
-            UserEntity savedUser = buildUser(5L, Role.EMPLOYEE, true);
+            UserEntity savedUser = buildUser(5L, Role.TECHNICIAN, true);
 
             when(userRepository.existsByEmail(any())).thenReturn(false);
             when(userRepository.existsByDni(any())).thenReturn(false);
@@ -309,7 +309,7 @@ class EmployeeServiceImplTest {
             // Arrange
             EmployeeEntity emp = buildEmployee(1L);
             UpdateEmployeeRequestDTO request =
-                    new UpdateEmployeeRequestDTO(EmployeePosition.MECANICO, EmployeeState.NOT_AVAILABLE);
+                    new UpdateEmployeeRequestDTO(EmployeePosition.RECEPCIONISTA, EmployeeState.NOT_AVAILABLE);
             EmployeeResponseDTO dto = mock(EmployeeResponseDTO.class);
 
             when(employeeRepository.findById(1L)).thenReturn(Optional.of(emp));
@@ -323,7 +323,8 @@ class EmployeeServiceImplTest {
             assertThat(result).isEqualTo(dto);
             verify(employeeRepository).save(argThat(e ->
                     e.getState() == EmployeeState.NOT_AVAILABLE &&
-                            e.getPosition() == EmployeePosition.MECANICO
+                            e.getPosition() == EmployeePosition.RECEPCIONISTA &&
+                            e.getUser().getRole() == Role.RECEPTIONIST
             ));
         }
 
@@ -468,7 +469,7 @@ class EmployeeServiceImplTest {
             Long nonClientId = 2L;
 
             UserEntity currentOwner = buildUser(1L, Role.CLIENT, true);
-            UserEntity nonClient = buildUser(nonClientId, Role.EMPLOYEE, true);
+            UserEntity nonClient = buildUser(nonClientId, Role.TECHNICIAN, true);
             VehicleEntity vehicle = buildVehicle(vehicleId, "ABC3AX", currentOwner);
             var request = buildTransferRequest(nonClientId); // Extraído de la lambda
 
