@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confirmacion de cita</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+<div style="max-width:680px;margin:24px auto;border-radius:14px;overflow:hidden;box-shadow:0 8px 26px rgba(0,0,0,0.08);background:#ffffff;">
+    <header style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:26px 28px;color:#ffffff;">
+        <h1 style="margin:0;font-size:24px;font-weight:700;letter-spacing:0.3px;">JMmotoservicio</h1>
+        <p style="margin:8px 0 0 0;font-size:14px;opacity:0.95;">Confirmacion de cita</p>
+    </header>
+
+    <main style="padding:28px;background:#ffffff;">
+        <section style="margin-bottom:18px;">
+            <h2 style="margin:0 0 10px 0;font-size:21px;font-family:Georgia,'Times New Roman',serif;color:#0f172a;">Hola {{CLIENT_NAME}},</h2>
+            <p style="margin:0;font-size:15px;line-height:1.65;">Tu cita ha sido agendada exitosamente.</p>
+        </section>
+
+        <section style="background:#f8fafc;border:1px solid #e2e8f0;border-left:5px solid #2563eb;border-radius:10px;padding:16px 18px;margin-bottom:20px;">
+            <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;"><strong>Fecha:</strong> {{APPOINTMENT_DATE}}</p>
+            <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;"><strong>Hora:</strong> {{APPOINTMENT_TIME}}</p>
+            <p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;"><strong>Tipo:</strong> {{APPOINTMENT_TYPE}}</p>
+            <p style="margin:0;font-size:14px;line-height:1.6;"><strong>Vehiculo:</strong> {{VEHICLE_BRAND}} {{VEHICLE_MODEL}} ({{LICENSE_PLATE}})</p>
+        </section>
+
+        <section style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;">
+            <p style="margin:0;font-size:14px;line-height:1.6;">Te esperamos en JMmotoservicio.</p>
+        </section>
+    </main>
+
+    <footer style="background:#0f172a;padding:18px 28px;color:#cbd5e1;">
+        <p style="margin:0 0 4px 0;font-size:12px;">Este es un mensaje automatico de informacion.</p>
+        <p style="margin:0;font-size:12px;">JMmotoservicio - Equipo de Plataforma</p>
+    </footer>
+</div>
+</body>
+</html>
+
