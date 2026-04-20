@@ -48,3 +48,5 @@ logging:
     org.springframework.security.web.authentication: WARN
     org.springframework.security.web.access: WARN
 
+chatbot:
+  webhook-url: ${CHATBOT_WEBHOOK_URL:http://34.63.104.195:5678/webhook/webhook-chat}
