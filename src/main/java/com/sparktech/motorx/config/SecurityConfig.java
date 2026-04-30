@@ -38,6 +38,7 @@ public class SecurityConfig {
     public static final String ADMIN_ROLE = "ADMIN";
     public static final String WAREHOUSE_ROLE = "WAREHOUSE_WORKER";
     public static final String RECEPTIONIST_ROLE = "RECEPTIONIST";
+    public static final String TECHNICIAN_ROLE = "TECHNICIAN";
     public static final String SPARES_ROUTE = "/api/v1/spares/**";
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -116,6 +117,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/inventory/sales/**").hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE, RECEPTIONIST_ROLE)
 
                         .requestMatchers("/api/v1/reception/**").hasAnyRole(ADMIN_ROLE, RECEPTIONIST_ROLE)
+                        .requestMatchers("/api/v1/orders/**").hasAnyRole(ADMIN_ROLE, TECHNICIAN_ROLE)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/procedures/**").hasAnyRole(ADMIN_ROLE, TECHNICIAN_ROLE)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/procedures").hasRole(ADMIN_ROLE)
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/procedures/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/v1/notifications/**").authenticated()
                         .requestMatchers("/api/v1/user/**").authenticated()
 

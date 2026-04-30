@@ -10,6 +10,7 @@ public enum LogServiceName {
     SPARE,
     INVENTORY,
     RECEPTION,
-    NOTIFICATION
+    NOTIFICATION,
+    SERVICE_ORDER
 }
 
