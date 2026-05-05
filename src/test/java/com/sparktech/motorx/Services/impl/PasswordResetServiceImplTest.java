@@ -5,7 +5,6 @@ import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.Services.IVerificationCodeService;
 import com.sparktech.motorx.dto.auth.PasswordResetDTO;
 import com.sparktech.motorx.dto.auth.PasswordResetRequestDTO;
-import com.sparktech.motorx.dto.notification.EmailDTO;
 import com.sparktech.motorx.entity.PasswordResetTokenEntity;
 import com.sparktech.motorx.entity.UserEntity;
 import com.sparktech.motorx.exception.InvalidTokenException;
@@ -25,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,7 +51,10 @@ class PasswordResetServiceImplTest {
 
     @Captor private ArgumentCaptor<PasswordResetTokenEntity> tokenCaptor;
     @Captor private ArgumentCaptor<UserEntity> userCaptor;
-    @Captor private ArgumentCaptor<EmailDTO> emailCaptor;
+    @Captor private ArgumentCaptor<String> recipientCaptor;
+    @Captor private ArgumentCaptor<String> subjectCaptor;
+    @Captor private ArgumentCaptor<String> templateCaptor;
+    @Captor private ArgumentCaptor<Map<String, String>> placeholdersCaptor;
 
     // ================================================================
     // BUILDERS
@@ -121,8 +124,13 @@ class PasswordResetServiceImplTest {
             assertThat(saved.getTokenHash()).isNotBlank();
 
             // Assert — email enviado
-            verify(notificationService, times(1)).sendMail(emailCaptor.capture());
-            assertThat(emailCaptor.getValue().recipient()).isEqualTo("user@test.com");
+            verify(notificationService, times(1)).sendTemplatedMail(
+                    recipientCaptor.capture(),
+                    subjectCaptor.capture(),
+                    templateCaptor.capture(),
+                    placeholdersCaptor.capture()
+            );
+            assertThat(recipientCaptor.getValue()).isEqualTo("user@test.com");
         }
 
         @Test
@@ -200,8 +208,13 @@ class PasswordResetServiceImplTest {
             sut.requestReset(request);
 
             // Assert
-            verify(notificationService).sendMail(emailCaptor.capture());
-            assertThat(emailCaptor.getValue().subject())
+            verify(notificationService).sendTemplatedMail(
+                    recipientCaptor.capture(),
+                    subjectCaptor.capture(),
+                    templateCaptor.capture(),
+                    placeholdersCaptor.capture()
+            );
+            assertThat(subjectCaptor.getValue())
                     .containsIgnoringCase("Recuperación");
         }
 
@@ -218,8 +231,13 @@ class PasswordResetServiceImplTest {
             sut.requestReset(request);
 
             // Assert
-            verify(notificationService).sendMail(emailCaptor.capture());
-            assertThat(emailCaptor.getValue().body()).contains("777777");
+            verify(notificationService).sendTemplatedMail(
+                    recipientCaptor.capture(),
+                    subjectCaptor.capture(),
+                    templateCaptor.capture(),
+                    placeholdersCaptor.capture()
+            );
+            assertThat(placeholdersCaptor.getValue().get("RECOVERY_CODE")).isEqualTo("777777");
         }
 
         @Test
@@ -248,7 +266,9 @@ class PasswordResetServiceImplTest {
             when(userRepository.findByEmail(any())).thenReturn(Optional.of(user));
             when(tokenRepository.findByUserAndUsedFalse(any())).thenReturn(List.of());
             when(verificationCodeService.generateVerificationCode()).thenReturn("123456");
-            doThrow(new RuntimeException("SMTP down")).when(notificationService).sendMail(any());
+            doThrow(new RuntimeException("SMTP down"))
+                    .when(notificationService)
+                    .sendTemplatedMail(anyString(), anyString(), anyString(), anyMap());
 
             // Act + Assert
             assertThatCode(() -> sut.requestReset(request))
@@ -293,8 +313,13 @@ class PasswordResetServiceImplTest {
             verify(tokenRepository, atLeastOnce()).save(token);
 
             // Assert — email de confirmación enviado
-            verify(notificationService, times(1)).sendMail(emailCaptor.capture());
-            assertThat(emailCaptor.getValue().recipient()).isEqualTo("user@test.com");
+            verify(notificationService, times(1)).sendTemplatedMail(
+                    recipientCaptor.capture(),
+                    subjectCaptor.capture(),
+                    templateCaptor.capture(),
+                    placeholdersCaptor.capture()
+            );
+            assertThat(recipientCaptor.getValue()).isEqualTo("user@test.com");
         }
 
         @Test
@@ -398,8 +423,13 @@ class PasswordResetServiceImplTest {
             sut.resetPassword(new PasswordResetDTO(plainCode, "newPass"));
 
             // Assert
-            verify(notificationService).sendMail(emailCaptor.capture());
-            assertThat(emailCaptor.getValue().subject())
+            verify(notificationService).sendTemplatedMail(
+                    recipientCaptor.capture(),
+                    subjectCaptor.capture(),
+                    templateCaptor.capture(),
+                    placeholdersCaptor.capture()
+            );
+            assertThat(subjectCaptor.getValue())
                     .containsIgnoringCase("Contraseña")
                     .containsIgnoringCase("Exitosamente");
         }
@@ -422,8 +452,13 @@ class PasswordResetServiceImplTest {
             sut.resetPassword(new PasswordResetDTO(plainCode, "newPass"));
 
             // Assert
-            verify(notificationService).sendMail(emailCaptor.capture());
-            assertThat(emailCaptor.getValue().body())
+            verify(notificationService).sendTemplatedMail(
+                    recipientCaptor.capture(),
+                    subjectCaptor.capture(),
+                    templateCaptor.capture(),
+                    placeholdersCaptor.capture()
+            );
+            assertThat(placeholdersCaptor.getValue().get("USER_NAME"))
                     .contains("Usuario Test");
         }
 
@@ -440,7 +475,9 @@ class PasswordResetServiceImplTest {
                     .thenReturn(Optional.of(token));
             when(passwordEncoder.encode(any())).thenReturn("encoded");
             when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-            doThrow(new RuntimeException("SMTP down")).when(notificationService).sendMail(any());
+            doThrow(new RuntimeException("SMTP down"))
+                    .when(notificationService)
+                    .sendTemplatedMail(anyString(), anyString(), anyString(), anyMap());
 
             // Act + Assert
             assertThatCode(() ->
@@ -477,3 +514,4 @@ class PasswordResetServiceImplTest {
         }
     }
 }
+

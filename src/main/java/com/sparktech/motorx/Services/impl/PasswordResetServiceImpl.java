@@ -7,7 +7,6 @@ import com.sparktech.motorx.Services.IVerificationCodeService;
 
 import com.sparktech.motorx.dto.auth.PasswordResetDTO;
 import com.sparktech.motorx.dto.auth.PasswordResetRequestDTO;
-import com.sparktech.motorx.dto.notification.EmailDTO;
 import com.sparktech.motorx.entity.PasswordResetTokenEntity;
 import com.sparktech.motorx.entity.LogActionType;
 import com.sparktech.motorx.entity.LogServiceName;
@@ -26,7 +25,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -41,6 +42,8 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
     private final ILogService logService;
 
     private static final int TOKEN_EXPIRATION_MINUTES = 15;
+    private static final String PASSWORD_RECOVERY_TEMPLATE = "password-recovery.html";
+    private static final String PASSWORD_CHANGED_TEMPLATE = "password-changed-success.html";
 
     @Override
     @Transactional
@@ -186,29 +189,13 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
     private void sendPasswordResetEmail(UserEntity user, String recoveryCode) {
         try {
             String subject = "Recuperación de Contraseña - Jmmotoservicio";
-            String body = String.format(
-                    """
-                    Hola %s,
-                    
-                    Has solicitado restablecer tu contraseña en Jmmotoservicio.
-                    
-                    Tu código de recuperación es: %s
-                    
-                    Este código expira en %d minutos.
-                    
-                    Si no solicitaste este cambio, puedes ignorar este correo.
-                    
-                    Saludos,
-                    Equipo de Taller
-                    """,
-                    user.getName() != null ? user.getName() : "Usuario",
-                    recoveryCode,
-                    TOKEN_EXPIRATION_MINUTES
+            Map<String, String> placeholders = Map.of(
+                    "USER_NAME", user.getName() != null ? user.getName() : "Usuario",
+                    "RECOVERY_CODE", recoveryCode,
+                    "EXPIRATION_MINUTES", String.valueOf(TOKEN_EXPIRATION_MINUTES)
             );
 
-            EmailDTO emailDTO = new EmailDTO(subject, body, user.getEmail());
-            notificationService.sendMail(emailDTO);
-
+            notificationService.sendTemplatedMail(user.getEmail(), subject, PASSWORD_RECOVERY_TEMPLATE, placeholders);
             log.info("Password reset email sent to: {}", user.getEmail());
         } catch (Exception e) {
             log.error("Error sending password reset email to: {}", user.getEmail(), e);
@@ -221,26 +208,13 @@ public class PasswordResetServiceImpl implements IPasswordResetService {
     private void sendPasswordChangeConfirmationEmail(UserEntity user) {
         try {
             String subject = "Contraseña Cambiada Exitosamente - Jmmotoservicio";
-            String body = String.format(
-                    """
-                    Hola %s,
-                    
-                    Tu contraseña ha sido cambiada exitosamente en la applicación.
-                    
-                    Fecha y hora del cambio: %s
-                    
-                    Si no realizaste este cambio, contacta inmediatamente con nuestro soporte.
-                    
-                    Saludos,
-                    Equipo de Taller
-                    """,
-                    user.getName() != null ? user.getName() : "Usuario",
-                    LocalDateTime.now()
+            String changedAt = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            Map<String, String> placeholders = Map.of(
+                    "USER_NAME", user.getName() != null ? user.getName() : "Usuario",
+                    "CHANGED_AT", changedAt
             );
 
-            EmailDTO emailDTO = new EmailDTO(subject, body, user.getEmail());
-            notificationService.sendMail(emailDTO);
-
+            notificationService.sendTemplatedMail(user.getEmail(), subject, PASSWORD_CHANGED_TEMPLATE, placeholders);
             log.info("Password change confirmation email sent to: {}", user.getEmail());
         } catch (Exception e) {
             log.error("Error sending password change confirmation email to: {}", user.getEmail(), e);
