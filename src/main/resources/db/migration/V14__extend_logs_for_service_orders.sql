@@ -1,0 +1,26 @@
+-- ============================================================
+-- MotorX - Migracion V14: Logs para ordenes de servicio
+-- ============================================================
+
+ALTER TABLE logs DROP CONSTRAINT IF EXISTS chk_logs_service_name;
+ALTER TABLE logs ADD CONSTRAINT chk_logs_service_name CHECK (
+    service_name IN (
+        'AUTHENTICATION','USER','PASSWORD_RESET','APPOINTMENT','VEHICLE','ADMIN',
+        'SPARE','INVENTORY','RECEPTION','NOTIFICATION','SERVICE_ORDER'
+    )
+);
+
+ALTER TABLE logs DROP CONSTRAINT IF EXISTS chk_logs_action_type;
+ALTER TABLE logs ADD CONSTRAINT chk_logs_action_type CHECK (
+    action_type IN (
+        'LOGIN','REGISTER','LOGOUT','VERIFY_2FA','REFRESH_TOKEN',
+        'PASSWORD_RESET_REQUEST','PASSWORD_RESET_CONFIRM',
+        'UPDATE_USER_PROFILE','SCHEDULE_APPOINTMENT','CANCEL_APPOINTMENT',
+        'CREATE_SPARE','UPDATE_SPARE','UPDATE_SPARE_PURCHASE_PRICE','DELETE_SPARE',
+        'REGISTER_PURCHASE','REGISTER_SALE',
+        'INITIATE_RECEPTION','CONFIRM_RECEPTION',
+        'CREATE_NOTIFICATION','READ_NOTIFICATION','READ_ALL_NOTIFICATIONS',
+        'CREATE_SERVICE_ORDER','ADD_ORDER_PROCEDURE','UPDATE_ORDER_PROCEDURE','ADD_ORDER_SPARE','COMPLETE_SERVICE_ORDER'
+    )
+);
+

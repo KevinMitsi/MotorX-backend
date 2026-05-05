@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(
@@ -51,6 +53,12 @@ public class OrderServiceEntity {
     @Column(nullable = false, length = 30)
     private OrderStatus status;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderProcedureEntity> procedures = new ArrayList<>();
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderSpareEntity> spares = new ArrayList<>();
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -60,6 +68,15 @@ public class OrderServiceEntity {
     @PrePersist
     private void prePersist() {
         validateDates();
+        if (totalServices == null) {
+            totalServices = BigDecimal.ZERO;
+        }
+        if (totalSpareParts == null) {
+            totalSpareParts = BigDecimal.ZERO;
+        }
+        if (totalToPay == null) {
+            totalToPay = BigDecimal.ZERO;
+        }
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }

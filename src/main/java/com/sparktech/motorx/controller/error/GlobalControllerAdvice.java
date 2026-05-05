@@ -151,6 +151,36 @@ public class GlobalControllerAdvice {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
+    @ExceptionHandler(ServiceNotFoundException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleServiceNotFoundException(ServiceNotFoundException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.NOT_FOUND.value(),
+                "Servicio no encontrado",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(ProcedureNotFoundException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleProcedureNotFoundException(ProcedureNotFoundException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.NOT_FOUND.value(),
+                "Procedimiento no encontrado",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(OrderServiceNotFoundException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleOrderServiceNotFoundException(OrderServiceNotFoundException ex) {
+        ResponseErrorDTO error = new ResponseErrorDTO(
+                HttpStatus.NOT_FOUND.value(),
+                "Orden de servicio no encontrada",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
     // ---------------------------------------------------------------
     // EXCEPCIONES DE VEHÍCULOS
     // ---------------------------------------------------------------
@@ -475,6 +505,15 @@ public class GlobalControllerAdvice {
         ));
     }
 
+    @ExceptionHandler(DuplicateProcedureNameException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleDuplicateProcedureNameException(DuplicateProcedureNameException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ResponseErrorDTO(
+                HttpStatus.CONFLICT.value(),
+                "Nombre de procedimiento duplicado",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
     @ExceptionHandler(InsufficientStockException.class)
     public ResponseEntity<@NotNull ResponseErrorDTO> handleInsufficientStockException(InsufficientStockException ex) {
         return ResponseEntity.status(422).body(new ResponseErrorDTO(
@@ -516,6 +555,15 @@ public class GlobalControllerAdvice {
         return ResponseEntity.status(422).body(new ResponseErrorDTO(
                 422,
                 "La cita no es elegible para recepcion",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
+    @ExceptionHandler(TechnicianNotAssignedException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleTechnicianNotAssignedException(TechnicianNotAssignedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ResponseErrorDTO(
+                HttpStatus.FORBIDDEN.value(),
+                "El tecnico no esta asignado a la cita",
                 Map.of(KEY_DETAIL, ex.getMessage())
         ));
     }

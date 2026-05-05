@@ -5,6 +5,8 @@ import lombok.*;
 import java.math.BigDecimal;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -38,6 +40,14 @@ public class ServiceEntity {
 
     @Column(nullable = false)
     private Boolean active = true;
+
+    @ManyToMany
+    @JoinTable(
+            name = "service_procedures",
+            joinColumns = @JoinColumn(name = "service_id"),
+            inverseJoinColumns = @JoinColumn(name = "procedure_id")
+    )
+    private Set<ProcedureEntity> baseProcedures = new HashSet<>();
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
