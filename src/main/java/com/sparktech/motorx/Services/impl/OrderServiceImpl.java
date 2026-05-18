@@ -7,6 +7,7 @@ import com.sparktech.motorx.dto.order.AddProcedureToOrderDTO;
 import com.sparktech.motorx.dto.order.AddSpareToOrderDTO;
 import com.sparktech.motorx.dto.order.OrderResponseDTO;
 import com.sparktech.motorx.dto.order.UpdateOrderProcedureCostDTO;
+import com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO;
 import com.sparktech.motorx.entity.*;
 import com.sparktech.motorx.exception.*;
 import com.sparktech.motorx.mapper.OrderServiceMapper;
@@ -16,8 +17,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -255,6 +260,58 @@ public class OrderServiceImpl implements IOrderService {
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<TechnicianDailyOrderDTO> getMyTodayOrders() {
+        UserEntity actor = currentUserService.getAuthenticatedUser();
+        EmployeeEntity employee = employeeRepository.findByUserId(actor.getId())
+                .orElseThrow(() -> new EmployeeNotFoundException(actor.getId()));
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+
+        List<AppointmentEntity> appointments = appointmentRepository
+                .findByTechnicianIdAndStatusAndProcessStartedAtBetween(
+                        employee.getId(),
+                        AppointmentStatus.IN_PROGRESS,
+                        start,
+                        end
+                );
+
+        if (appointments.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> appointmentIds = appointments.stream()
+                .map(AppointmentEntity::getId)
+                .toList();
+
+        Map<Long, Long> orderIdsByAppointment = orderRepository.findByAppointmentIdIn(appointmentIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        order -> order.getAppointment().getId(),
+                        OrderServiceEntity::getId,
+                        (existing, replacement) -> existing
+                ));
+
+        return appointments.stream()
+                .map(appointment -> {
+                    VehicleEntity vehicle = appointment.getVehicle();
+                    return new TechnicianDailyOrderDTO(
+                            appointment.getId(),
+                            orderIdsByAppointment.get(appointment.getId()),
+                            vehicle.getLicensePlate(),
+                            vehicle.getBrand(),
+                            vehicle.getModel(),
+                            appointment.getAppointmentDate(),
+                            appointment.getStartTime(),
+                            appointment.getProcessStartedAt()
+                    );
+                })
+                .toList();
+    }
+
     private OrderServiceEntity getEditableOrder(Long orderId) {
         OrderServiceEntity order = orderRepository.findDetailedById(orderId)
                 .orElseThrow(() -> new OrderServiceNotFoundException(orderId));
@@ -300,4 +357,3 @@ public class OrderServiceImpl implements IOrderService {
         return spare.getPurchasePriceWithVat().multiply(BigDecimal.ONE.add(margin));
     }
 }
-

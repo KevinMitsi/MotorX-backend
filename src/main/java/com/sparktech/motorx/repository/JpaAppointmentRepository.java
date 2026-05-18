@@ -174,4 +174,19 @@ package com.sparktech.motorx.repository;
                   AND a.endTime > a.startTime
                 """)
         long countValidRecords();
+
+        @Query("""
+                SELECT a FROM AppointmentEntity a
+                WHERE a.technician.id = :technicianId
+                  AND a.status = :status
+                  AND a.processStartedAt >= :start
+                  AND a.processStartedAt < :end
+                ORDER BY a.processStartedAt DESC
+                """)
+        List<AppointmentEntity> findByTechnicianIdAndStatusAndProcessStartedAtBetween(
+                @Param("technicianId") Long technicianId,
+                @Param("status") AppointmentStatus status,
+                @Param("start") java.time.LocalDateTime start,
+                @Param("end") java.time.LocalDateTime end
+        );
     }

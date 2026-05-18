@@ -62,6 +62,10 @@ En esta version se incorporan 4 bloques principales:
   - `procedureId`, `procedureName`, `cost`
 - `OrderSpareResponseDTO`
   - `spareId`, `spareName`, `quantity`, `unitPrice`, `lineTotal`
+- `TechnicianDailyOrderDTO`
+  - `appointmentId`, `orderId`
+  - `licensePlate`, `brand`, `model`
+  - `appointmentDate`, `startTime`, `processStartedAt`
 
 ### 3.2 Procedimientos
 
@@ -165,6 +169,7 @@ Base path: `/api/v1/orders`
 | `PATCH` | `/api/v1/orders/{orderId}/procedures/{procedureId}` | Actualizar costo de procedimiento en una orden | `UpdateOrderProcedureCostDTO` | `OrderResponseDTO` | `TECHNICIAN` |
 | `POST` | `/api/v1/orders/{orderId}/spares` | Agregar repuesto a una orden | `AddSpareToOrderDTO` | `OrderResponseDTO` | `TECHNICIAN` |
 | `POST` | `/api/v1/orders/{orderId}/complete` | Completar una orden | - | `OrderResponseDTO` | `TECHNICIAN` |
+| `GET` | `/api/v1/orders/my/today` | Listar citas con recepcion confirmada hoy del tecnico autenticado | - | `List<TechnicianDailyOrderDTO>` | `TECHNICIAN` |
 
 ---
 
@@ -266,4 +271,3 @@ Cobertura de:
 - `@Schema` en DTOs de error
 
 > `APIDOC_V5.md` funciona como addendum incremental y no reemplaza los documentos anteriores.
-
