@@ -5,7 +5,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +39,17 @@ class OrderDtoTest {
                 List.of(spareResponseDTO)
         );
 
+        TechnicianDailyOrderDTO technicianDailyOrderDTO = new TechnicianDailyOrderDTO(
+                9L,
+                12L,
+                "ABC123",
+                "Honda",
+                "CB190",
+                LocalDate.now(),
+                LocalTime.of(9, 0),
+                LocalDateTime.now()
+        );
+
         assertThat(addProcedureToOrderDTO.procedureId()).isEqualTo(5L);
         assertThat(addSpareToOrderDTO.quantity()).isEqualTo(2);
         assertThat(updateOrderProcedureCostDTO.cost()).isEqualByComparingTo("70");
@@ -44,6 +57,6 @@ class OrderDtoTest {
         assertThat(spareResponseDTO.lineTotal()).isEqualByComparingTo("270");
         assertThat(orderResponseDTO.totalToPay()).isEqualByComparingTo("310");
         assertThat(orderResponseDTO.procedures()).hasSize(1);
+        assertThat(technicianDailyOrderDTO.licensePlate()).isEqualTo("ABC123");
     }
 }
-

@@ -6,6 +6,7 @@ import com.sparktech.motorx.dto.order.AddProcedureToOrderDTO;
 import com.sparktech.motorx.dto.order.AddSpareToOrderDTO;
 import com.sparktech.motorx.dto.order.OrderResponseDTO;
 import com.sparktech.motorx.dto.order.UpdateOrderProcedureCostDTO;
+import com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -21,6 +22,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -129,6 +132,16 @@ public class OrderServiceController {
     ) {
         return ResponseEntity.ok(orderService.completeOrder(orderId));
     }
+
+    @GetMapping("/my/today")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    @Operation(summary = "Listar citas con recepcion confirmada hoy para el tecnico autenticado")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Listado de citas del dia"),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
+    public ResponseEntity<List<TechnicianDailyOrderDTO>> getMyTodayOrders() {
+        return ResponseEntity.ok(orderService.getMyTodayOrders());
+    }
 }
-
-

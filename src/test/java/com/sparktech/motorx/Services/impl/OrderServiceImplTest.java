@@ -20,7 +20,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -299,6 +301,44 @@ class OrderServiceImplTest {
         verify(logService).logFailure(eq(LogServiceName.SERVICE_ORDER), eq(LogActionType.ADD_ORDER_PROCEDURE), eq("tech@test.com"), eq(10L), contains("tecnico"));
     }
 
+    @Test
+    @DisplayName("getMyTodayOrders lista citas con recepcion confirmada hoy")
+    void getMyTodayOrdersShouldReturnTodayAppointments() {
+        AppointmentEntity first = appointment(AppointmentStatus.IN_PROGRESS, technician);
+        first.setId(1L);
+        first.setAppointmentDate(LocalDate.now());
+        first.setStartTime(LocalTime.of(9, 0));
+        first.setProcessStartedAt(LocalDateTime.now().minusMinutes(15));
+        first.setVehicle(vehicle("ABC123"));
+
+        AppointmentEntity second = appointment(AppointmentStatus.IN_PROGRESS, technician);
+        second.setId(2L);
+        second.setAppointmentDate(LocalDate.now());
+        second.setStartTime(LocalTime.of(10, 0));
+        second.setProcessStartedAt(LocalDateTime.now().minusMinutes(5));
+        second.setVehicle(vehicle("XYZ987"));
+
+        OrderServiceEntity order = new OrderServiceEntity();
+        order.setId(100L);
+        order.setAppointment(first);
+
+        when(employeeRepository.findByUserId(10L)).thenReturn(Optional.of(technician));
+        when(appointmentRepository.findByTechnicianIdAndStatusAndProcessStartedAtBetween(
+                eq(20L),
+                eq(AppointmentStatus.IN_PROGRESS),
+                any(LocalDateTime.class),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of(first, second));
+        when(orderRepository.findByAppointmentIdIn(List.of(1L, 2L))).thenReturn(List.of(order));
+
+        List<com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO> result = sut.getMyTodayOrders();
+
+        assertThat(result).hasSize(2);
+        assertThat(result.getFirst().appointmentId()).isEqualTo(1L);
+        assertThat(result.getFirst().orderId()).isEqualTo(100L);
+        assertThat(result.get(1).orderId()).isNull();
+    }
+
     private AppointmentEntity appointment(AppointmentStatus status, EmployeeEntity assignedTechnician) {
         AppointmentEntity appointment = new AppointmentEntity();
         appointment.setId(5L);
@@ -356,6 +396,14 @@ class OrderServiceImplTest {
         os.setUnitPrice(unitPrice);
         os.setId(new OrderSpareId(order.getId(), spare.getId()));
         return os;
+    }
+
+    private VehicleEntity vehicle(String licensePlate) {
+        VehicleEntity vehicle = new VehicleEntity();
+        vehicle.setLicensePlate(licensePlate);
+        vehicle.setBrand("Honda");
+        vehicle.setModel("CB190");
+        return vehicle;
     }
 
     private OrderResponseDTO dummyResponse() {

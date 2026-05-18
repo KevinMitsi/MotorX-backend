@@ -17,5 +17,6 @@ public interface IOrderService {
     OrderResponseDTO addSpare(Long orderId, AddSpareToOrderDTO dto);
 
     OrderResponseDTO completeOrder(Long orderId);
-}
 
+    java.util.List<com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO> getMyTodayOrders();
+}
