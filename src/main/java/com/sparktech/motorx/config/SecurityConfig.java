@@ -121,6 +121,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/procedures/**").hasAnyRole(ADMIN_ROLE, TECHNICIAN_ROLE)
                         .requestMatchers(HttpMethod.POST, "/api/v1/procedures").hasRole(ADMIN_ROLE)
                         .requestMatchers(HttpMethod.PUT, "/api/v1/procedures/**").hasRole(ADMIN_ROLE)
+                        .requestMatchers("/api/v1/services/**").hasRole(ADMIN_ROLE)
                         .requestMatchers("/api/v1/notifications/**").authenticated()
                         .requestMatchers("/api/v1/user/**").authenticated()
 
