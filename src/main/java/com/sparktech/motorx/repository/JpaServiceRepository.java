@@ -18,6 +18,8 @@ public interface JpaServiceRepository extends JpaRepository<@NotNull ServiceEnti
 
     boolean existsByName(String name);
 
+    boolean existsByNameAndIdNot(String name, Long id);
+
     // --- Solo servicios activos (para el cliente al agendar cita) ---
     List<ServiceEntity> findByActiveTrue();
 

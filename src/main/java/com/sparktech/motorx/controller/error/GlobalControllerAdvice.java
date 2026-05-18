@@ -514,6 +514,15 @@ public class GlobalControllerAdvice {
         ));
     }
 
+    @ExceptionHandler(DuplicateServiceNameException.class)
+    public ResponseEntity<@NotNull ResponseErrorDTO> handleDuplicateServiceNameException(DuplicateServiceNameException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ResponseErrorDTO(
+                HttpStatus.CONFLICT.value(),
+                "Nombre de servicio duplicado",
+                Map.of(KEY_DETAIL, ex.getMessage())
+        ));
+    }
+
     @ExceptionHandler(InsufficientStockException.class)
     public ResponseEntity<@NotNull ResponseErrorDTO> handleInsufficientStockException(InsufficientStockException ex) {
         return ResponseEntity.status(422).body(new ResponseErrorDTO(
