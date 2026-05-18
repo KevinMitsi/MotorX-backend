@@ -139,6 +139,10 @@ En esta version se incorporan 4 bloques principales:
 - `totalSpareParts` = suma de `unitPrice * quantity`.
 - `totalToPay` = `totalServices + totalSpareParts`.
 
+### 5.7 Citas del tecnico (listado diario)
+
+- El endpoint `GET /api/v1/orders/my/today` considera "hoy" segun `processStartedAt` (fecha/hora de confirmacion de recepcion).
+
 ---
 
 ## 6) Endpoints nuevos
