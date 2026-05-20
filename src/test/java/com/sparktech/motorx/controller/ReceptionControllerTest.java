@@ -2,6 +2,7 @@ package com.sparktech.motorx.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparktech.motorx.Services.IReceptionService;
+import com.sparktech.motorx.Services.IAppointmentService;
 import com.sparktech.motorx.Services.IMetricsService;
 import com.sparktech.motorx.controller.error.GlobalControllerAdvice;
 import com.sparktech.motorx.dto.appointment.AppointmentResponseDTO;
@@ -28,9 +29,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,11 +50,14 @@ class ReceptionControllerTest {
     @Resource
     private IReceptionService receptionService;
 
+    @Resource
+    private IAppointmentService appointmentService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        reset(receptionService);
+        reset(receptionService, appointmentService);
     }
 
     @Test
@@ -129,6 +135,12 @@ class ReceptionControllerTest {
 
         @Bean
         @Primary
+        IAppointmentService appointmentService() {
+            return mock(IAppointmentService.class);
+        }
+
+        @Bean
+        @Primary
         JwtService jwtService() {
             return mock(JwtService.class);
         }
@@ -151,5 +163,16 @@ class ReceptionControllerTest {
             return mock(IMetricsService.class);
         }
     }
-}
 
+    @Test
+    @WithMockUser(roles = "RECEPTIONIST")
+    @DisplayName("GET /api/v1/reception/appointments/upcoming retorna 200")
+    void shouldListUpcomingAppointments() throws Exception {
+        when(appointmentService.getAppointmentsByDateRange(any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of(response(15L, AppointmentStatus.SCHEDULED)));
+
+        mockMvc.perform(get("/api/v1/reception/appointments/upcoming"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id", is(15)));
+    }
+}
