@@ -138,6 +138,18 @@ class OrderServiceControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "TECHNICIAN")
+    @DisplayName("POST /api/v1/orders/{id}/send-service-details retorna 200")
+    void shouldSendServiceDetails() throws Exception {
+        doNothing().when(orderService).sendServiceDetails(3L);
+
+        mockMvc.perform(post("/api/v1/orders/3/send-service-details"))
+                .andExpect(status().isOk());
+
+        verify(orderService).sendServiceDetails(3L);
+    }
+
+    @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("GET /api/v1/orders/appointment/{id} retorna 200")
     void shouldGetByAppointment() throws Exception {
