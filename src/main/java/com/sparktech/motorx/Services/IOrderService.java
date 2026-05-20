@@ -4,6 +4,7 @@ import com.sparktech.motorx.dto.order.AddProcedureToOrderDTO;
 import com.sparktech.motorx.dto.order.AddSpareToOrderDTO;
 import com.sparktech.motorx.dto.order.OrderResponseDTO;
 import com.sparktech.motorx.dto.order.UpdateOrderProcedureCostDTO;
+import com.sparktech.motorx.dto.appointment.TechnicianAppointmentSummaryDTO;
 
 public interface IOrderService {
     OrderResponseDTO createOrder(Long appointmentId);
@@ -19,4 +20,6 @@ public interface IOrderService {
     OrderResponseDTO completeOrder(Long orderId);
 
     java.util.List<com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO> getMyTodayOrders();
+
+    TechnicianAppointmentSummaryDTO getAppointmentSummary(Long appointmentId);
 }

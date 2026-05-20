@@ -8,6 +8,7 @@ import com.sparktech.motorx.dto.order.AddSpareToOrderDTO;
 import com.sparktech.motorx.dto.order.OrderResponseDTO;
 import com.sparktech.motorx.dto.order.UpdateOrderProcedureCostDTO;
 import com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO;
+import com.sparktech.motorx.dto.appointment.TechnicianAppointmentSummaryDTO;
 import com.sparktech.motorx.entity.*;
 import com.sparktech.motorx.exception.*;
 import com.sparktech.motorx.mapper.OrderServiceMapper;
@@ -310,6 +311,38 @@ public class OrderServiceImpl implements IOrderService {
                     );
                 })
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TechnicianAppointmentSummaryDTO getAppointmentSummary(Long appointmentId) {
+        AppointmentEntity appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new AppointmentNotFoundException(appointmentId));
+
+        UserEntity actor = currentUserService.getAuthenticatedUser();
+        resolveTechnicianOrThrow(actor, appointment);
+
+        VehicleEntity vehicle = appointment.getVehicle();
+        EmployeeEntity technician = appointment.getTechnician();
+        UserEntity client = vehicle.getOwner();
+
+        return new TechnicianAppointmentSummaryDTO(
+                appointment.getId(),
+                appointment.getAppointmentType(),
+                appointment.getStatus(),
+                appointment.getAppointmentDate(),
+                appointment.getStartTime(),
+                appointment.getEndTime(),
+                vehicle.getId(),
+                vehicle.getLicensePlate(),
+                vehicle.getBrand(),
+                vehicle.getModel(),
+                appointment.getCurrentMileage(),
+                appointment.getClientNotes(),
+                client != null ? client.getName() : null,
+                technician != null ? technician.getId() : null,
+                technician != null ? technician.getUser().getName() : null
+        );
     }
 
     private OrderServiceEntity getEditableOrder(Long orderId) {

@@ -7,6 +7,7 @@ import com.sparktech.motorx.dto.order.AddSpareToOrderDTO;
 import com.sparktech.motorx.dto.order.OrderResponseDTO;
 import com.sparktech.motorx.dto.order.UpdateOrderProcedureCostDTO;
 import com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO;
+import com.sparktech.motorx.dto.appointment.TechnicianAppointmentSummaryDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -143,5 +144,20 @@ public class OrderServiceController {
     })
     public ResponseEntity<List<TechnicianDailyOrderDTO>> getMyTodayOrders() {
         return ResponseEntity.ok(orderService.getMyTodayOrders());
+    }
+
+    @GetMapping("/appointment/{appointmentId}/summary")
+    @PreAuthorize("hasAnyRole('ADMIN','TECHNICIAN')")
+    @Operation(summary = "Resumen de cita para tecnico", description = "Devuelve datos no sensibles de la cita para trabajo en orden.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Resumen encontrado"),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Cita no encontrada", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
+    public ResponseEntity<@NotNull TechnicianAppointmentSummaryDTO> getAppointmentSummary(
+            @Parameter(description = "ID de la cita") @PathVariable Long appointmentId
+    ) {
+        return ResponseEntity.ok(orderService.getAppointmentSummary(appointmentId));
     }
 }

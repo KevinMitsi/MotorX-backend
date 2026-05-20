@@ -10,6 +10,7 @@ import com.sparktech.motorx.dto.order.AddProcedureToOrderDTO;
 import com.sparktech.motorx.dto.order.AddSpareToOrderDTO;
 import com.sparktech.motorx.dto.order.OrderResponseDTO;
 import com.sparktech.motorx.dto.order.UpdateOrderProcedureCostDTO;
+import com.sparktech.motorx.dto.appointment.TechnicianAppointmentSummaryDTO;
 import com.sparktech.motorx.entity.OrderStatus;
 import com.sparktech.motorx.security.CustomUserDetailsService;
 import com.sparktech.motorx.security.JwtAuthenticationFilter;
@@ -30,6 +31,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.hamcrest.Matchers.is;
@@ -148,6 +151,17 @@ class OrderServiceControllerTest {
                 .andExpect(jsonPath("$.appointmentId", is(8)));
     }
 
+    @Test
+    @WithMockUser(roles = "TECHNICIAN")
+    @DisplayName("GET /api/v1/orders/appointment/{id}/summary retorna 200")
+    void shouldGetAppointmentSummary() throws Exception {
+        when(orderService.getAppointmentSummary(8L)).thenReturn(summary(8L));
+
+        mockMvc.perform(get("/api/v1/orders/appointment/8/summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.appointmentId", is(8)));
+    }
+
     private OrderResponseDTO response(Long orderId, Long appointmentId, OrderStatus status) {
         return new OrderResponseDTO(
                 orderId,
@@ -161,6 +175,26 @@ class OrderServiceControllerTest {
                 status,
                 List.of(),
                 List.of()
+        );
+    }
+
+    private TechnicianAppointmentSummaryDTO summary(Long appointmentId) {
+        return new TechnicianAppointmentSummaryDTO(
+                appointmentId,
+                null,
+                null,
+                LocalDate.now(),
+                LocalTime.of(9, 0),
+                LocalTime.of(10, 0),
+                3L,
+                "ABC123",
+                "Honda",
+                "CB500",
+                12000,
+                "Notas cliente",
+                "Cliente",
+                7L,
+                "Tecnico"
         );
     }
 
