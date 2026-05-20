@@ -104,6 +104,7 @@ public class SecurityConfig {
                         ).permitAll()
 
                         //Admin users
+                        .requestMatchers("api/v1/admin/appointments/agenda").hasAnyRole(ADMIN_ROLE, RECEPTIONIST_ROLE)
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers(HttpMethod.POST, "/api/v1/spares").hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE)
                         .requestMatchers(HttpMethod.GET, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE, RECEPTIONIST_ROLE)
