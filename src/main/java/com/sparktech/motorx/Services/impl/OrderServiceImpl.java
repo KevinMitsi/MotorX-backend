@@ -1,8 +1,12 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.IEmailNotificationService;
+import com.sparktech.motorx.Services.IInventoryTransactionService;
 import com.sparktech.motorx.Services.IOrderService;
 import com.sparktech.motorx.Services.ILogService;
+import com.sparktech.motorx.dto.inventory.CreateSaleItemDTO;
+import com.sparktech.motorx.dto.inventory.CreateSaleTransactionDTO;
 import com.sparktech.motorx.dto.order.AddProcedureToOrderDTO;
 import com.sparktech.motorx.dto.order.AddSpareToOrderDTO;
 import com.sparktech.motorx.dto.order.OrderResponseDTO;
@@ -17,8 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +39,8 @@ public class OrderServiceImpl implements IOrderService {
     private final JpaEmployeeRepository employeeRepository;
     private final JpaProcedureRepository procedureRepository;
     private final JpaSpareRepository spareRepository;
+    private final IInventoryTransactionService inventoryTransactionService;
+    private final IEmailNotificationService emailNotificationService;
     private final ICurrentUserService currentUserService;
     private final ILogService logService;
     private final OrderServiceMapper orderMapper;
@@ -184,11 +192,11 @@ public class OrderServiceImpl implements IOrderService {
             Spare spare = spareRepository.findById(dto.spareId())
                     .orElseThrow(() -> new SpareNotFoundException(dto.spareId()));
 
-            int finalQty = spare.getQuantity() - dto.quantity();
-            if (finalQty < 0) {
-                throw new InsufficientStockException("Stock insuficiente para el repuesto: " + spare.getName());
-            }
-            spare.setQuantity(finalQty);
+            BigDecimal unitPrice = calculateSalePrice(spare);
+            inventoryTransactionService.registerSale(new CreateSaleTransactionDTO(
+                    order.getAppointment().getId(),
+                    List.of(new CreateSaleItemDTO(dto.spareId(), dto.quantity()))
+            ));
 
             OrderSpareEntity orderSpare = order.getSpares().stream()
                     .filter(s -> s.getSpare().getId().equals(dto.spareId()))
@@ -201,7 +209,7 @@ public class OrderServiceImpl implements IOrderService {
                 orderSpare.setOrder(order);
                 orderSpare.setSpare(spare);
                 orderSpare.setQuantity(dto.quantity());
-                orderSpare.setUnitPrice(calculateSalePrice(spare));
+                orderSpare.setUnitPrice(unitPrice);
                 order.getSpares().add(orderSpare);
             } else {
                 orderSpare.setQuantity(orderSpare.getQuantity() + dto.quantity());
@@ -248,6 +256,47 @@ public class OrderServiceImpl implements IOrderService {
                     "Orden completada " + orderId
             );
             return orderMapper.toResponseDTO(saved);
+        } catch (RuntimeException ex) {
+            logService.logFailure(
+                    LogServiceName.SERVICE_ORDER,
+                    LogActionType.COMPLETE_SERVICE_ORDER,
+                    actor.getEmail(),
+                    actor.getId(),
+                    ex.getMessage()
+            );
+            throw ex;
+        }
+    }
+
+    @Override
+    @Transactional
+    public void sendServiceDetails(Long orderId) {
+        UserEntity actor = currentUserService.getAuthenticatedUser();
+        try {
+            OrderServiceEntity order = orderRepository.findDetailedById(orderId)
+                    .orElseThrow(() -> new OrderServiceNotFoundException(orderId));
+
+            VehicleEntity vehicle = order.getAppointment().getVehicle();
+            UserEntity owner = vehicle.getOwner();
+            if (owner == null || owner.getEmail() == null || owner.getEmail().isBlank()) {
+                throw new IllegalStateException("La motocicleta no tiene un usuario asociado con correo válido");
+            }
+
+            String subject = "Detalle de servicio - orden #" + order.getId();
+            emailNotificationService.sendTemplatedMail(
+                    owner.getEmail(),
+                    subject,
+                    "service-details.html",
+                    buildServiceDetailsPlaceholders(order)
+            );
+
+            logService.logSuccess(
+                    LogServiceName.SERVICE_ORDER,
+                    LogActionType.COMPLETE_SERVICE_ORDER,
+                    actor.getEmail(),
+                    actor.getId(),
+                    "Detalle de servicio enviado para orden " + orderId
+            );
         } catch (RuntimeException ex) {
             logService.logFailure(
                     LogServiceName.SERVICE_ORDER,
@@ -339,21 +388,108 @@ public class OrderServiceImpl implements IOrderService {
     private void recalculateTotals(OrderServiceEntity order) {
         BigDecimal totalServices = order.getProcedures().stream()
                 .map(OrderProcedureEntity::getCost)
+                .map(this::safeMoney)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalSpares = order.getSpares().stream()
-                .map(s -> s.getUnitPrice().multiply(BigDecimal.valueOf(s.getQuantity())))
+                .map(s -> safeMoney(s.getUnitPrice()).multiply(BigDecimal.valueOf(s.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        order.setTotalServices(totalServices);
-        order.setTotalSpareParts(totalSpares);
-        order.setTotalToPay(totalServices.add(totalSpares));
+        order.setTotalServices(totalServices.setScale(2, RoundingMode.HALF_UP));
+        order.setTotalSpareParts(totalSpares.setScale(2, RoundingMode.HALF_UP));
+        order.setTotalToPay(order.getTotalServices().add(order.getTotalSpareParts()).setScale(2, RoundingMode.HALF_UP));
     }
 
     private BigDecimal calculateSalePrice(Spare spare) {
         BigDecimal margin = Boolean.TRUE.equals(spare.getIsOil())
                 ? BigDecimal.valueOf(0.25)
                 : BigDecimal.valueOf(0.35);
-        return spare.getPurchasePriceWithVat().multiply(BigDecimal.ONE.add(margin));
+        return safeMoney(spare.getPurchasePriceWithVat())
+                .multiply(BigDecimal.ONE.add(margin))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private Map<String, String> buildServiceDetailsPlaceholders(OrderServiceEntity order) {
+        VehicleEntity vehicle = order.getAppointment().getVehicle();
+        UserEntity owner = vehicle.getOwner();
+
+        Map<String, String> placeholders = new LinkedHashMap<>();
+        placeholders.put("CLIENT_NAME", owner != null ? safeText(owner.getName()) : "Cliente");
+        placeholders.put("CLIENT_EMAIL", owner != null ? safeText(owner.getEmail()) : "");
+        placeholders.put("ORDER_ID", String.valueOf(order.getId()));
+        placeholders.put("APPOINTMENT_ID", String.valueOf(order.getAppointment().getId()));
+        placeholders.put("TECHNICIAN_NAME", resolveTechnicianName(order));
+        placeholders.put("VEHICLE_INFO", safeText(vehicle.getBrand()) + " " + safeText(vehicle.getModel()) + " (" + safeText(vehicle.getLicensePlate()) + ")");
+        placeholders.put("ORDER_STATUS", order.getStatus().name());
+        placeholders.put("ORDER_DATE", order.getStartDate() != null ? order.getStartDate().toLocalDate().toString() : "");
+        placeholders.put("PROCEDURE_ROWS", buildProcedureRows(order));
+        placeholders.put("SPARE_ROWS", buildSpareRows(order));
+        placeholders.put("TOTAL_SERVICES", formatMoney(order.getTotalServices()));
+        placeholders.put("TOTAL_SPARE_PARTS", formatMoney(order.getTotalSpareParts()));
+        placeholders.put("TOTAL_TO_PAY", formatMoney(order.getTotalToPay()));
+        return placeholders;
+    }
+
+    private String buildProcedureRows(OrderServiceEntity order) {
+        if (order.getProcedures().isEmpty()) {
+            return "<tr><td colspan='3' style='padding:12px;text-align:center;color:#6b7280;'>Sin procedimientos registrados</td></tr>";
+        }
+
+        return order.getProcedures().stream()
+                .map(item -> "<tr>"
+                        + "<td style='padding:10px;border-bottom:1px solid #e5e7eb;'>" + escapeHtml(item.getProcedure().getName()) + "</td>"
+                        + "<td style='padding:10px;border-bottom:1px solid #e5e7eb;text-align:right;'>" + formatMoney(item.getCost()) + "</td>"
+                        + "<td style='padding:10px;border-bottom:1px solid #e5e7eb;text-align:right;'>" + formatMoney(item.getCost()) + "</td>"
+                        + "</tr>")
+                .collect(Collectors.joining());
+    }
+
+    private String buildSpareRows(OrderServiceEntity order) {
+        if (order.getSpares().isEmpty()) {
+            return "<tr><td colspan='5' style='padding:12px;text-align:center;color:#6b7280;'>Sin repuestos registrados</td></tr>";
+        }
+
+        return order.getSpares().stream()
+                .map(item -> {
+                    BigDecimal lineTotal = safeMoney(item.getUnitPrice()).multiply(BigDecimal.valueOf(item.getQuantity()));
+                    return "<tr>"
+                            + "<td style='padding:10px;border-bottom:1px solid #e5e7eb;'>" + escapeHtml(item.getSpare().getName()) + "</td>"
+                            + "<td style='padding:10px;border-bottom:1px solid #e5e7eb;text-align:right;'>" + item.getQuantity() + "</td>"
+                            + "<td style='padding:10px;border-bottom:1px solid #e5e7eb;text-align:right;'>" + formatMoney(item.getUnitPrice()) + "</td>"
+                            + "<td style='padding:10px;border-bottom:1px solid #e5e7eb;text-align:right;'>" + formatMoney(lineTotal) + "</td>"
+                            + "</tr>";
+                })
+                .collect(Collectors.joining());
+    }
+
+    private BigDecimal safeMoney(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private String formatMoney(BigDecimal value) {
+        return safeMoney(value).setScale(2, RoundingMode.HALF_UP).toPlainString();
+    }
+
+    private String safeText(String value) {
+        return value == null ? "" : escapeHtml(value);
+    }
+
+    private String resolveTechnicianName(OrderServiceEntity order) {
+        if (order.getEmployee() == null || order.getEmployee().getUser() == null) {
+            return "";
+        }
+        return safeText(order.getEmployee().getUser().getName());
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 }

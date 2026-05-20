@@ -1,6 +1,8 @@
 package com.sparktech.motorx.Services.impl;
 
 import com.sparktech.motorx.Services.ICurrentUserService;
+import com.sparktech.motorx.Services.IEmailNotificationService;
+import com.sparktech.motorx.Services.IInventoryTransactionService;
 import com.sparktech.motorx.Services.ILogService;
 import com.sparktech.motorx.dto.order.AddProcedureToOrderDTO;
 import com.sparktech.motorx.dto.order.AddSpareToOrderDTO;
@@ -25,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,6 +50,10 @@ class OrderServiceImplTest {
     @Mock
     private JpaSpareRepository spareRepository;
     @Mock
+    private IInventoryTransactionService inventoryTransactionService;
+    @Mock
+    private IEmailNotificationService emailNotificationService;
+    @Mock
     private ICurrentUserService currentUserService;
     @Mock
     private ILogService logService;
@@ -56,12 +63,11 @@ class OrderServiceImplTest {
     @InjectMocks
     private OrderServiceImpl sut;
 
-    private UserEntity actor;
     private EmployeeEntity technician;
 
     @BeforeEach
     void setUp() {
-        actor = new UserEntity();
+        UserEntity actor = new UserEntity();
         actor.setId(10L);
         actor.setEmail("tech@test.com");
 
@@ -71,6 +77,7 @@ class OrderServiceImplTest {
 
         lenient().when(currentUserService.getAuthenticatedUser()).thenReturn(actor);
         lenient().when(orderMapper.toResponseDTO(any(OrderServiceEntity.class))).thenReturn(dummyResponse());
+        lenient().when(inventoryTransactionService.registerSale(any())).thenReturn(null);
     }
 
     @Test
@@ -135,7 +142,7 @@ class OrderServiceImplTest {
     void addProcedureShouldAddAndRecalculateTotals() {
         AppointmentEntity appointment = appointment(AppointmentStatus.IN_PROGRESS, technician);
         OrderServiceEntity order = order(OrderStatus.IN_PROGRESS, appointment);
-        ProcedureEntity procedure = procedure(30L, "Cambio aceite");
+        ProcedureEntity procedure = procedure();
         when(orderRepository.findDetailedById(1L)).thenReturn(Optional.of(order));
         when(employeeRepository.findByUserId(10L)).thenReturn(Optional.of(technician));
         when(procedureRepository.findById(30L)).thenReturn(Optional.of(procedure));
@@ -154,10 +161,10 @@ class OrderServiceImplTest {
     void addProcedureShouldFailWhenDuplicate() {
         AppointmentEntity appointment = appointment(AppointmentStatus.IN_PROGRESS, technician);
         OrderServiceEntity order = order(OrderStatus.IN_PROGRESS, appointment);
-        order.getProcedures().add(orderProcedure(order, procedure(30L, "Cambio aceite"), new BigDecimal("40")));
+        order.getProcedures().add(orderProcedure(order, procedure(), new BigDecimal("40")));
         when(orderRepository.findDetailedById(1L)).thenReturn(Optional.of(order));
         when(employeeRepository.findByUserId(10L)).thenReturn(Optional.of(technician));
-        when(procedureRepository.findById(30L)).thenReturn(Optional.of(procedure(30L, "Cambio aceite")));
+        when(procedureRepository.findById(30L)).thenReturn(Optional.of(procedure()));
 
         assertThatThrownBy(() -> sut.addProcedure(1L, new AddProcedureToOrderDTO(30L, new BigDecimal("50"))))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -170,7 +177,7 @@ class OrderServiceImplTest {
     void updateProcedureCostShouldUpdateCost() {
         AppointmentEntity appointment = appointment(AppointmentStatus.IN_PROGRESS, technician);
         OrderServiceEntity order = order(OrderStatus.IN_PROGRESS, appointment);
-        ProcedureEntity procedure = procedure(30L, "Cambio aceite");
+        ProcedureEntity procedure = procedure();
         OrderProcedureEntity orderProcedure = orderProcedure(order, procedure, new BigDecimal("40"));
         order.getProcedures().add(orderProcedure);
         when(orderRepository.findDetailedById(1L)).thenReturn(Optional.of(order));
@@ -203,10 +210,11 @@ class OrderServiceImplTest {
     void addSpareShouldFailWhenInsufficientStock() {
         AppointmentEntity appointment = appointment(AppointmentStatus.IN_PROGRESS, technician);
         OrderServiceEntity order = order(OrderStatus.IN_PROGRESS, appointment);
-        Spare spare = spare(40L, false, new BigDecimal("100"), 1);
+        Spare spare = spare(false, new BigDecimal("100"), 1);
         when(orderRepository.findDetailedById(1L)).thenReturn(Optional.of(order));
         when(employeeRepository.findByUserId(10L)).thenReturn(Optional.of(technician));
         when(spareRepository.findById(40L)).thenReturn(Optional.of(spare));
+        when(inventoryTransactionService.registerSale(any())).thenThrow(new InsufficientStockException("Stock insuficiente para el repuesto: Filtro"));
 
         assertThatThrownBy(() -> sut.addSpare(1L, new AddSpareToOrderDTO(40L, 2)))
                 .isInstanceOf(InsufficientStockException.class);
@@ -219,7 +227,7 @@ class OrderServiceImplTest {
     void addSpareShouldAddOilSpareWithMargin() {
         AppointmentEntity appointment = appointment(AppointmentStatus.IN_PROGRESS, technician);
         OrderServiceEntity order = order(OrderStatus.IN_PROGRESS, appointment);
-        Spare spare = spare(40L, true, new BigDecimal("100"), 10);
+        Spare spare = spare(true, new BigDecimal("100"), 10);
         when(orderRepository.findDetailedById(1L)).thenReturn(Optional.of(order));
         when(employeeRepository.findByUserId(10L)).thenReturn(Optional.of(technician));
         when(spareRepository.findById(40L)).thenReturn(Optional.of(spare));
@@ -231,7 +239,13 @@ class OrderServiceImplTest {
         OrderSpareEntity added = order.getSpares().getFirst();
         assertThat(added.getUnitPrice()).isEqualByComparingTo("125.00");
         assertThat(order.getTotalSpareParts()).isEqualByComparingTo("250.00");
-        assertThat(spare.getQuantity()).isEqualTo(8);
+        verify(inventoryTransactionService).registerSale(argThat(dto ->
+                dto != null
+                        && dto.appointmentId().equals(5L)
+                        && dto.items().size() == 1
+                        && dto.items().getFirst().spareId().equals(40L)
+                        && dto.items().getFirst().quantity().equals(2)
+        ));
         verify(logService).logSuccess(eq(LogServiceName.SERVICE_ORDER), eq(LogActionType.ADD_ORDER_SPARE), eq("tech@test.com"), eq(10L), contains("Repuesto agregado"));
     }
 
@@ -240,7 +254,7 @@ class OrderServiceImplTest {
     void addSpareShouldIncreaseQuantityWhenExisting() {
         AppointmentEntity appointment = appointment(AppointmentStatus.IN_PROGRESS, technician);
         OrderServiceEntity order = order(OrderStatus.IN_PROGRESS, appointment);
-        Spare spare = spare(40L, false, new BigDecimal("100"), 10);
+        Spare spare = spare(false, new BigDecimal("100"), 10);
         OrderSpareEntity existing = orderSpare(order, spare, 1, new BigDecimal("135"));
         order.getSpares().add(existing);
         when(orderRepository.findDetailedById(1L)).thenReturn(Optional.of(order));
@@ -252,7 +266,7 @@ class OrderServiceImplTest {
 
         assertThat(existing.getQuantity()).isEqualTo(3);
         assertThat(order.getTotalSpareParts()).isEqualByComparingTo("405");
-        assertThat(spare.getQuantity()).isEqualTo(8);
+        verify(inventoryTransactionService).registerSale(any());
     }
 
     @Test
@@ -269,6 +283,40 @@ class OrderServiceImplTest {
         assertThat(order.getStatus()).isEqualTo(OrderStatus.COMPLETED);
         assertThat(order.getEndDate()).isNotNull();
         verify(logService).logSuccess(eq(LogServiceName.SERVICE_ORDER), eq(LogActionType.COMPLETE_SERVICE_ORDER), eq("tech@test.com"), eq(10L), contains("Orden completada"));
+    }
+
+    @Test
+    @DisplayName("sendServiceDetails envía HTML al correo del propietario")
+    void sendServiceDetailsShouldSendEmailToOwner() {
+        UserEntity owner = new UserEntity();
+        owner.setId(30L);
+        owner.setName("Carlos Cliente");
+        owner.setEmail("owner@test.com");
+
+        VehicleEntity vehicle = vehicle("ABC123");
+        vehicle.setOwner(owner);
+
+        AppointmentEntity appointment = appointment(AppointmentStatus.IN_PROGRESS, technician);
+        appointment.setVehicle(vehicle);
+
+        OrderServiceEntity order = order(OrderStatus.IN_PROGRESS, appointment);
+        order.getProcedures().add(orderProcedure(order, procedure(), new BigDecimal("50")));
+        order.getSpares().add(orderSpare(order, spare(false, new BigDecimal("100"), 10), 2, new BigDecimal("135")));
+        order.setTotalServices(new BigDecimal("50"));
+        order.setTotalSpareParts(new BigDecimal("270"));
+        order.setTotalToPay(new BigDecimal("320"));
+
+        when(orderRepository.findDetailedById(1L)).thenReturn(Optional.of(order));
+
+        sut.sendServiceDetails(1L);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, String>> placeholdersCaptor = ArgumentCaptor.forClass((Class<Map<String, String>>) (Class<?>) Map.class);
+        verify(emailNotificationService).sendTemplatedMail(eq("owner@test.com"), contains("orden #1"), eq("service-details.html"), placeholdersCaptor.capture());
+        assertThat(placeholdersCaptor.getValue()).containsEntry("TOTAL_TO_PAY", "320.00");
+        assertThat(placeholdersCaptor.getValue().get("PROCEDURE_ROWS")).contains("Cambio aceite");
+        assertThat(placeholdersCaptor.getValue().get("SPARE_ROWS")).contains("Filtro");
+        verify(logService).logSuccess(eq(LogServiceName.SERVICE_ORDER), eq(LogActionType.COMPLETE_SERVICE_ORDER), eq("tech@test.com"), eq(10L), contains("enviado"));
     }
 
     @Test
@@ -362,10 +410,10 @@ class OrderServiceImplTest {
         return order;
     }
 
-    private ProcedureEntity procedure(Long id, String name) {
+    private ProcedureEntity procedure() {
         ProcedureEntity procedure = new ProcedureEntity();
-        procedure.setId(id);
-        procedure.setName(name);
+        procedure.setId(30L);
+        procedure.setName("Cambio aceite");
         return procedure;
     }
 
@@ -378,9 +426,9 @@ class OrderServiceImplTest {
         return op;
     }
 
-    private Spare spare(Long id, boolean isOil, BigDecimal purchasePrice, int quantity) {
+    private Spare spare(boolean isOil, BigDecimal purchasePrice, int quantity) {
         Spare spare = new Spare();
-        spare.setId(id);
+        spare.setId(40L);
         spare.setName("Filtro");
         spare.setIsOil(isOil);
         spare.setPurchasePriceWithVat(purchasePrice);
