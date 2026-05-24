@@ -67,6 +67,12 @@ En esta version se incorporan 4 bloques principales:
   - `appointmentId`, `orderId`
   - `licensePlate`, `brand`, `model`
   - `appointmentDate`, `startTime`, `processStartedAt`
+- `TechnicianAppointmentSummaryDTO`
+  - `appointmentId`, `appointmentType`, `status`
+  - `appointmentDate`, `startTime`, `endTime`
+  - `vehicleId`, `vehiclePlate`, `vehicleBrand`, `vehicleModel`
+  - `currentMileage`, `clientNotes`
+  - `clientFullName`, `technicianId`, `technicianFullName`
 
 ### 3.2 Procedimientos
 
@@ -164,7 +170,13 @@ En esta version se incorporan 4 bloques principales:
 
 - El endpoint `GET /api/v1/orders/my/today` considera "hoy" segun `processStartedAt` (fecha/hora de confirmacion de recepcion).
 
-### 5.8 Servicios del taller (admin)
+### 5.8 Resumen de cita para tecnico
+
+- Endpoint `GET /api/v1/orders/appointment/{appointmentId}/summary`.
+- Retorna datos no sensibles para trabajar la orden (incluye `clientNotes`).
+- Acceso: `ADMIN`, `TECHNICIAN`.
+
+### 5.9 Servicios del taller (admin)
 
 - CRUD completo de servicios del taller (`/api/v1/services`).
 - Los procedimientos base se gestionan por servicio (reemplazo de set completo).
@@ -200,6 +212,7 @@ Base path: `/api/v1/orders`
 | `POST` | `/api/v1/orders/{orderId}/spares` | Agregar repuesto a una orden | `AddSpareToOrderDTO` | `OrderResponseDTO` | `TECHNICIAN` |
 | `POST` | `/api/v1/orders/{orderId}/complete` | Completar una orden | - | `OrderResponseDTO` | `TECHNICIAN` |
 | `GET` | `/api/v1/orders/my/today` | Listar citas con recepcion confirmada hoy del tecnico autenticado | - | `List<TechnicianDailyOrderDTO>` | `TECHNICIAN` |
+| `GET` | `/api/v1/orders/appointment/{appointmentId}/summary` | Resumen de cita para tecnico | - | `TechnicianAppointmentSummaryDTO` | `ADMIN`, `TECHNICIAN` |
 
 ### 6.3 Servicios del taller (admin)
 
