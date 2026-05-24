@@ -107,7 +107,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/appointments/agenda").hasAnyRole(ADMIN_ROLE, RECEPTIONIST_ROLE)
                         .requestMatchers("/api/v1/admin/**").hasRole(ADMIN_ROLE)
                         .requestMatchers(HttpMethod.POST, "/api/v1/spares").hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE)
-                        .requestMatchers(HttpMethod.GET, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE, RECEPTIONIST_ROLE)
+                        .requestMatchers(HttpMethod.GET, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE, RECEPTIONIST_ROLE, TECHNICIAN_ROLE)
                         .requestMatchers(HttpMethod.PUT, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE)
                         .requestMatchers(HttpMethod.PATCH, SPARES_ROUTE).hasAnyRole(ADMIN_ROLE, WAREHOUSE_ROLE)
                         .requestMatchers(HttpMethod.DELETE, SPARES_ROUTE).hasRole(ADMIN_ROLE)
