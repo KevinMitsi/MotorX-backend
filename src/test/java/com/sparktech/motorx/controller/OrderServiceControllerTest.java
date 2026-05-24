@@ -9,6 +9,7 @@ import com.sparktech.motorx.controller.error.GlobalControllerAdvice;
 import com.sparktech.motorx.dto.order.AddProcedureToOrderDTO;
 import com.sparktech.motorx.dto.order.AddSpareToOrderDTO;
 import com.sparktech.motorx.dto.order.OrderResponseDTO;
+import com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO;
 import com.sparktech.motorx.dto.order.UpdateOrderProcedureCostDTO;
 import com.sparktech.motorx.dto.appointment.TechnicianAppointmentSummaryDTO;
 import com.sparktech.motorx.entity.OrderStatus;
@@ -30,11 +31,13 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -141,6 +144,18 @@ class OrderServiceControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "TECHNICIAN")
+    @DisplayName("POST /api/v1/orders/{id}/send-service-details retorna 200")
+    void shouldSendServiceDetails() throws Exception {
+        doNothing().when(orderService).sendServiceDetails(3L);
+
+        mockMvc.perform(post("/api/v1/orders/3/send-service-details"))
+                .andExpect(status().isOk());
+
+        verify(orderService).sendServiceDetails(3L);
+    }
+
+    @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("GET /api/v1/orders/appointment/{id} retorna 200")
     void shouldGetByAppointment() throws Exception {
@@ -160,6 +175,48 @@ class OrderServiceControllerTest {
         mockMvc.perform(get("/api/v1/orders/appointment/8/summary"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appointmentId", is(8)));
+    }
+    @DisplayName("GET /api/v1/orders/my/active retorna 200 con lista de citas activas")
+    void shouldGetMyActiveOrders() throws Exception {
+        TechnicianDailyOrderDTO first = new TechnicianDailyOrderDTO(
+                1L, 10L, "ABC123", "Honda", "CB190",
+                LocalDate.now(), LocalTime.of(9, 0), LocalDateTime.now()
+        );
+        TechnicianDailyOrderDTO second = new TechnicianDailyOrderDTO(
+                2L, null, "XYZ987", "Yamaha", "MT07",
+                LocalDate.now(), LocalTime.of(10, 0), LocalDateTime.now().minusDays(1)
+        );
+        when(orderService.getMyActiveOrders()).thenReturn(List.of(first, second));
+
+        mockMvc.perform(get("/api/v1/orders/my/active"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].appointmentId", is(1)))
+                .andExpect(jsonPath("$[0].orderId", is(10)))
+                .andExpect(jsonPath("$[0].licensePlate", is("ABC123")))
+                .andExpect(jsonPath("$[1].appointmentId", is(2)))
+                .andExpect(jsonPath("$[1].licensePlate", is("XYZ987")));
+
+        verify(orderService).getMyActiveOrders();
+    }
+
+    @Test
+    @WithMockUser(roles = "TECHNICIAN")
+    @DisplayName("GET /api/v1/orders/my/today retorna 200 con lista de citas del dia")
+    void shouldGetMyTodayOrders() throws Exception {
+        TechnicianDailyOrderDTO dto = new TechnicianDailyOrderDTO(
+                5L, 20L, "DEF456", "Suzuki", "GSX",
+                LocalDate.now(), LocalTime.of(8, 0), LocalDateTime.now()
+        );
+        when(orderService.getMyTodayOrders()).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/api/v1/orders/my/today"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].appointmentId", is(5)))
+                .andExpect(jsonPath("$[0].orderId", is(20)));
+
+        verify(orderService).getMyTodayOrders();
     }
 
     private OrderResponseDTO response(Long orderId, Long appointmentId, OrderStatus status) {

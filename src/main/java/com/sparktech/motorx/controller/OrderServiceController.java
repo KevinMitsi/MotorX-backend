@@ -134,6 +134,22 @@ public class OrderServiceController {
         return ResponseEntity.ok(orderService.completeOrder(orderId));
     }
 
+    @PostMapping("/{orderId}/send-service-details")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    @Operation(summary = "Enviar al cliente el detalle del servicio por correo")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Correo enviado"),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "404", description = "Orden no encontrada", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
+    public ResponseEntity<@NotNull Void> sendServiceDetails(
+            @Parameter(description = "ID de la orden") @PathVariable Long orderId
+    ) {
+        orderService.sendServiceDetails(orderId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/my/today")
     @PreAuthorize("hasRole('TECHNICIAN')")
     @Operation(summary = "Listar citas con recepcion confirmada hoy para el tecnico autenticado")
@@ -142,7 +158,7 @@ public class OrderServiceController {
             @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
             @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
     })
-    public ResponseEntity<List<TechnicianDailyOrderDTO>> getMyTodayOrders() {
+    public ResponseEntity<@NotNull List<TechnicianDailyOrderDTO>> getMyTodayOrders() {
         return ResponseEntity.ok(orderService.getMyTodayOrders());
     }
 
@@ -159,5 +175,16 @@ public class OrderServiceController {
             @Parameter(description = "ID de la cita") @PathVariable Long appointmentId
     ) {
         return ResponseEntity.ok(orderService.getAppointmentSummary(appointmentId));
+    }
+    @GetMapping("/my/active")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    @Operation(summary = "Listar todas las citas IN_PROGRESS asignadas al tecnico autenticado (sin filtro de fecha)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Listado de citas activas"),
+            @ApiResponse(responseCode = "401", description = "No autenticado", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class))),
+            @ApiResponse(responseCode = "403", description = "Sin permisos", content = @Content(schema = @Schema(implementation = ResponseErrorDTO.class)))
+    })
+    public ResponseEntity<@NotNull List<TechnicianDailyOrderDTO>> getMyActiveOrders() {
+        return ResponseEntity.ok(orderService.getMyActiveOrders());
     }
 }

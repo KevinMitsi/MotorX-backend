@@ -19,7 +19,10 @@ public interface IOrderService {
 
     OrderResponseDTO completeOrder(Long orderId);
 
+    void sendServiceDetails(Long orderId);
+
     java.util.List<com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO> getMyTodayOrders();
 
     TechnicianAppointmentSummaryDTO getAppointmentSummary(Long appointmentId);
+    java.util.List<com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO> getMyActiveOrders();
 }

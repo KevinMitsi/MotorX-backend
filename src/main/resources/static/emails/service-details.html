@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detalle de servicio</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+<div style="max-width:900px;margin:24px auto;border-radius:14px;overflow:hidden;box-shadow:0 8px 26px rgba(0,0,0,0.08);background:#ffffff;">
+    <header style="background:linear-gradient(135deg,#111827,#2563eb);padding:26px 28px;color:#ffffff;">
+        <h1 style="margin:0;font-size:24px;font-weight:700;letter-spacing:0.3px;">MotorX</h1>
+        <p style="margin:8px 0 0 0;font-size:14px;opacity:0.95;">Detalle de servicio y cobro</p>
+    </header>
+
+    <main style="padding:28px;background:#ffffff;">
+        <section style="margin-bottom:18px;">
+            <h2 style="margin:0 0 10px 0;font-size:21px;font-family:Georgia,'Times New Roman',serif;color:#0f172a;">Hola {{CLIENT_NAME}},</h2>
+            <p style="margin:0;font-size:15px;line-height:1.65;">Compartimos el detalle del trabajo realizado sobre tu motocicleta.</p>
+        </section>
+
+        <section style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;margin-bottom:20px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;line-height:1.6;">
+                <tr>
+                    <td style="padding:6px 0;"><strong>Orden:</strong> #{{ORDER_ID}}</td>
+                    <td style="padding:6px 0;"><strong>Cita:</strong> #{{APPOINTMENT_ID}}</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0;"><strong>Vehiculo:</strong> {{VEHICLE_INFO}}</td>
+                    <td style="padding:6px 0;"><strong>Tecnico:</strong> {{TECHNICIAN_NAME}}</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0;"><strong>Estado:</strong> {{ORDER_STATUS}}</td>
+                    <td style="padding:6px 0;"><strong>Fecha de inicio:</strong> {{ORDER_DATE}}</td>
+                </tr>
+            </table>
+        </section>
+
+        <section style="margin-bottom:24px;">
+            <h3 style="margin:0 0 10px 0;font-size:18px;color:#0f172a;">Procedimientos</h3>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+                <thead>
+                <tr style="background:#eff6ff;color:#0f172a;">
+                    <th style="padding:12px;text-align:left;border-bottom:1px solid #dbeafe;">Procedimiento</th>
+                    <th style="padding:12px;text-align:right;border-bottom:1px solid #dbeafe;">Costo</th>
+                    <th style="padding:12px;text-align:right;border-bottom:1px solid #dbeafe;">Subtotal</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{PROCEDURE_ROWS}}
+                </tbody>
+            </table>
+        </section>
+
+        <section style="margin-bottom:24px;">
+            <h3 style="margin:0 0 10px 0;font-size:18px;color:#0f172a;">Repuestos</h3>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+                <thead>
+                <tr style="background:#fef3c7;color:#0f172a;">
+                    <th style="padding:12px;text-align:left;border-bottom:1px solid #fde68a;">Repuesto</th>
+                    <th style="padding:12px;text-align:right;border-bottom:1px solid #fde68a;">Cantidad</th>
+                    <th style="padding:12px;text-align:right;border-bottom:1px solid #fde68a;">Precio unitario</th>
+                    <th style="padding:12px;text-align:right;border-bottom:1px solid #fde68a;">Subtotal</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{SPARE_ROWS}}
+                </tbody>
+            </table>
+        </section>
+
+        <section style="display:block;background:#0f172a;color:#ffffff;border-radius:12px;padding:18px 20px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;color:#ffffff;font-size:15px;line-height:1.7;">
+                <tr>
+                    <td style="padding:4px 0;">Total procedimientos</td>
+                    <td style="padding:4px 0;text-align:right;">$ {{TOTAL_SERVICES}}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0;">Total repuestos</td>
+                    <td style="padding:4px 0;text-align:right;">$ {{TOTAL_SPARE_PARTS}}</td>
+                </tr>
+                <tr>
+                    <td style="padding:10px 0 0 0;font-size:17px;font-weight:700;">Total a pagar</td>
+                    <td style="padding:10px 0 0 0;text-align:right;font-size:17px;font-weight:700;">$ {{TOTAL_TO_PAY}}</td>
+                </tr>
+            </table>
+        </section>
+    </main>
+
+    <footer style="background:#f8fafc;padding:18px 28px;color:#64748b;">
+        <p style="margin:0 0 4px 0;font-size:12px;">Correo automatico de detalle de servicio.</p>
+        <p style="margin:0;font-size:12px;">MotorX - Taller de motocicletas</p>
+    </footer>
+</div>
+</body>
+</html>
+
