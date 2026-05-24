@@ -44,7 +44,7 @@ public class SpareController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER','RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('ADMIN','WAREHOUSE_WORKER','RECEPTIONIST', 'TECHNICIAN')")
     @Operation(summary = "Listar o buscar repuestos")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Listado consultado exitosamente"),
