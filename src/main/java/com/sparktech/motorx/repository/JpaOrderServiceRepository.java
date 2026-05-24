@@ -19,8 +19,6 @@ public interface JpaOrderServiceRepository extends JpaRepository<@NotNull OrderS
             SELECT o FROM OrderServiceEntity o
             LEFT JOIN FETCH o.procedures op
             LEFT JOIN FETCH op.procedure
-            LEFT JOIN FETCH o.spares os
-            LEFT JOIN FETCH os.spare
             WHERE o.appointment.id = :appointmentId
             """)
     Optional<OrderServiceEntity> findDetailedByAppointmentId(@Param("appointmentId") Long appointmentId);
@@ -29,8 +27,6 @@ public interface JpaOrderServiceRepository extends JpaRepository<@NotNull OrderS
             SELECT o FROM OrderServiceEntity o
             LEFT JOIN FETCH o.procedures op
             LEFT JOIN FETCH op.procedure
-            LEFT JOIN FETCH o.spares os
-            LEFT JOIN FETCH os.spare
             WHERE o.id = :orderId
             """)
     Optional<OrderServiceEntity> findDetailedById(@Param("orderId") Long orderId);
