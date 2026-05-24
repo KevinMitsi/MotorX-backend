@@ -361,6 +361,52 @@ public class OrderServiceImpl implements IOrderService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<TechnicianDailyOrderDTO> getMyActiveOrders() {
+        UserEntity actor = currentUserService.getAuthenticatedUser();
+        EmployeeEntity employee = employeeRepository.findByUserId(actor.getId())
+                .orElseThrow(() -> new EmployeeNotFoundException(actor.getId()));
+
+        List<AppointmentEntity> appointments = appointmentRepository
+                .findByTechnicianIdAndStatusOrderByAppointmentDateDescStartTimeDesc(
+                        employee.getId(),
+                        AppointmentStatus.IN_PROGRESS
+                );
+
+        if (appointments.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> appointmentIds = appointments.stream()
+                .map(AppointmentEntity::getId)
+                .toList();
+
+        Map<Long, Long> orderIdsByAppointment = orderRepository.findByAppointmentIdIn(appointmentIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        order -> order.getAppointment().getId(),
+                        OrderServiceEntity::getId,
+                        (existing, replacement) -> existing
+                ));
+
+        return appointments.stream()
+                .map(appointment -> {
+                    VehicleEntity vehicle = appointment.getVehicle();
+                    return new TechnicianDailyOrderDTO(
+                            appointment.getId(),
+                            orderIdsByAppointment.get(appointment.getId()),
+                            vehicle.getLicensePlate(),
+                            vehicle.getBrand(),
+                            vehicle.getModel(),
+                            appointment.getAppointmentDate(),
+                            appointment.getStartTime(),
+                            appointment.getProcessStartedAt()
+                    );
+                })
+                .toList();
+    }
+
     private OrderServiceEntity getEditableOrder(Long orderId) {
         OrderServiceEntity order = orderRepository.findDetailedById(orderId)
                 .orElseThrow(() -> new OrderServiceNotFoundException(orderId));

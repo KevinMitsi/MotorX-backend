@@ -189,4 +189,9 @@ package com.sparktech.motorx.repository;
                 @Param("start") java.time.LocalDateTime start,
                 @Param("end") java.time.LocalDateTime end
         );
+
+        List<AppointmentEntity> findByTechnicianIdAndStatusOrderByAppointmentDateDescStartTimeDesc(
+                Long technicianId,
+                AppointmentStatus status
+        );
     }

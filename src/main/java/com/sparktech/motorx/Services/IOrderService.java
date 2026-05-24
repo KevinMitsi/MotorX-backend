@@ -21,4 +21,6 @@ public interface IOrderService {
     void sendServiceDetails(Long orderId);
 
     java.util.List<com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO> getMyTodayOrders();
+
+    java.util.List<com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO> getMyActiveOrders();
 }
