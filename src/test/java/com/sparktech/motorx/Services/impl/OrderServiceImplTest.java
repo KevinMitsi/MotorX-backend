@@ -387,6 +387,57 @@ class OrderServiceImplTest {
         assertThat(result.get(1).orderId()).isNull();
     }
 
+    @Test
+    @DisplayName("getMyActiveOrders lista todas las citas IN_PROGRESS sin filtro de fecha")
+    void getMyActiveOrdersShouldReturnAllInProgressAppointments() {
+        AppointmentEntity yesterday = appointment(AppointmentStatus.IN_PROGRESS, technician);
+        yesterday.setId(1L);
+        yesterday.setAppointmentDate(LocalDate.now().minusDays(1));
+        yesterday.setStartTime(LocalTime.of(15, 0));
+        yesterday.setProcessStartedAt(LocalDateTime.now().minusDays(1).minusHours(2));
+        yesterday.setVehicle(vehicle("ABC123"));
+
+        AppointmentEntity today = appointment(AppointmentStatus.IN_PROGRESS, technician);
+        today.setId(2L);
+        today.setAppointmentDate(LocalDate.now());
+        today.setStartTime(LocalTime.of(9, 0));
+        today.setProcessStartedAt(LocalDateTime.now().minusMinutes(30));
+        today.setVehicle(vehicle("XYZ987"));
+
+        OrderServiceEntity order = new OrderServiceEntity();
+        order.setId(100L);
+        order.setAppointment(today);
+
+        when(employeeRepository.findByUserId(10L)).thenReturn(Optional.of(technician));
+        when(appointmentRepository.findByTechnicianIdAndStatusOrderByAppointmentDateDescStartTimeDesc(
+                20L, AppointmentStatus.IN_PROGRESS
+        )).thenReturn(List.of(yesterday, today));
+        when(orderRepository.findByAppointmentIdIn(List.of(1L, 2L))).thenReturn(List.of(order));
+
+        List<com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO> result = sut.getMyActiveOrders();
+
+        assertThat(result).hasSize(2);
+        assertThat(result.getFirst().appointmentId()).isEqualTo(1L);
+        assertThat(result.getFirst().orderId()).isNull();
+        assertThat(result.get(1).appointmentId()).isEqualTo(2L);
+        assertThat(result.get(1).orderId()).isEqualTo(100L);
+        verify(appointmentRepository).findByTechnicianIdAndStatusOrderByAppointmentDateDescStartTimeDesc(20L, AppointmentStatus.IN_PROGRESS);
+    }
+
+    @Test
+    @DisplayName("getMyActiveOrders retorna lista vacia cuando no hay citas activas")
+    void getMyActiveOrdersShouldReturnEmptyWhenNoAppointments() {
+        when(employeeRepository.findByUserId(10L)).thenReturn(Optional.of(technician));
+        when(appointmentRepository.findByTechnicianIdAndStatusOrderByAppointmentDateDescStartTimeDesc(
+                20L, AppointmentStatus.IN_PROGRESS
+        )).thenReturn(List.of());
+
+        List<com.sparktech.motorx.dto.order.TechnicianDailyOrderDTO> result = sut.getMyActiveOrders();
+
+        assertThat(result).isEmpty();
+        verify(orderRepository, never()).findByAppointmentIdIn(any());
+    }
+
     private AppointmentEntity appointment(AppointmentStatus status, EmployeeEntity assignedTechnician) {
         AppointmentEntity appointment = new AppointmentEntity();
         appointment.setId(5L);

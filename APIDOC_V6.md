@@ -2,9 +2,9 @@
 
 > **Base funcional:** este documento complementa `APIDOC.md` + `APIDOC_V2.md` + `APIDOC_V3.md` + `APIDOC_V4.md` + `APIDOC_V5.md`.
 >
-> **Adicional V6:** ajusta el flujo del técnico en ordenes de servicio, integra el descuento real de inventario al agregar repuestos, recalcula totales y agrega el envio del detalle de servicio por correo en HTML.
+> **Adicional V6:** ajusta el flujo del técnico en ordenes de servicio, integra el descuento real de inventario al agregar repuestos, recalcula totales, agrega el envio del detalle de servicio por correo en HTML y expone endpoint para citas IN_PROGRESS activas del técnico sin filtro de fecha.
 >
-> **Fecha de consolidacion:** 2026-05-20
+> **Fecha de consolidacion:** 2026-05-24
 
 ---
 
@@ -51,10 +51,12 @@
 Base path: `/api/v1/orders`
 
 | Metodo | Endpoint | Descripcion | Request DTO | Response DTO | Acceso |
-|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|
 | `POST` | `/api/v1/orders/{orderId}/send-service-details` | Enviar por correo el detalle del servicio en HTML | - | - | `TECHNICIAN` |
+| `GET` | `/api/v1/orders/my/today` | Listar citas IN_PROGRESS del día (filtro por processStartedAt = hoy) | - | `List<TechnicianDailyOrderDTO>` | `TECHNICIAN` |
+| `GET` | `/api/v1/orders/my/active` | Listar todas las citas IN_PROGRESS del técnico autenticado (sin filtro de fecha) | - | `List<TechnicianDailyOrderDTO>` | `TECHNICIAN` |
 
-### 3.2 Comportamiento
+### 3.2 Comportamiento — send-service-details
 
 - Busca la orden por ID.
 - Toma el correo del usuario asociado a la motocicleta.
@@ -64,6 +66,26 @@ Base path: `/api/v1/orders`
   - procedimientos
   - repuestos
   - totales finales
+
+### 3.3 Comportamiento — my/today vs my/active
+
+| Endpoint | Filtro | Uso |
+|---|---|---|
+| `GET /api/v1/orders/my/today` | `technicianId + IN_PROGRESS + processStartedAt BETWEEN today 00:00 AND tomorrow 00:00` | Órdenes que arrancaron hoy |
+| `GET /api/v1/orders/my/active` | `technicianId + IN_PROGRESS` (sin filtro de fecha) | Órdenes activas sin importar el día que arrancaron |
+
+Ambos endpoints devuelven `List<TechnicianDailyOrderDTO>` con los campos:
+
+- `appointmentId`
+- `orderId` (puede ser `null` si aún no se creó la orden)
+- `licensePlate`
+- `brand`
+- `model`
+- `appointmentDate`
+- `startTime`
+- `processStartedAt`
+
+**Problema resuelto por my/active:** cuando una cita queda en `IN_PROGRESS` de un día para otro (ej. el técnico no la completó antes del cierre), `my/today` no la muestra porque su `processStartedAt` es del día anterior. `my/active` sí la incluye al eliminar el filtro temporal.
 
 ---
 
